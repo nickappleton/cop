@@ -63,11 +63,10 @@
 #define VEC_DISABLE_COMPILER_BUILTINS (0)
 #endif
 
-#define VEC_FUNCTION_ATTRIBUTES COP_ATTR_UNUSED COP_ATTR_INLINE
+#define VEC_FUNCTION_ATTRIBUTES static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE
 
 #if defined(__clang__) || defined(__GNUC__)
 #define VEC_ALIGN_BEST __attribute__((aligned(64)))
-/* #elif other compilers... */
 #elif defined(_MSC_VER)
 #define VEC_ALIGN_BEST __declspec(align(64))
 #else
@@ -80,14 +79,14 @@
  * will generate those operations. This macro is always used for the v1d and
  * v1f types which only really exist as a convenience. */
 #define VEC_BASIC_OPERATIONS(type_, data_, initsplat_) \
-static VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return a + b; } \
-static VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return a - b; } \
-static VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return a * b; } \
-static VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return *((type_ *)ptr); } \
-static VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld0(const void *ptr)     { return (type_)(*(const float *)(ptr)); } \
-static VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return (type_)initsplat_(a); } \
-static VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { *((type_ *)ptr) = val; } \
-static VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return -a; }
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return a + b; } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return a - b; } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return a * b; } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return *((type_ *)ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld0(const void *ptr)     { return (type_)(*(const float *)(ptr)); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return (type_)initsplat_(a); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { *((type_ *)ptr) = val; } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return -a; }
 
 #define VEC_INITSPLAT1(a) (a)
 #define VEC_INITSPLAT2(a) {(a), (a)}
@@ -102,8 +101,8 @@ typedef double v1d;
 VEC_BASIC_OPERATIONS(v1f, float,  VEC_INITSPLAT1)
 VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1)
 
-VEC_FUNCTION_ATTRIBUTES static v1f v1f_rotl(v1f a, v1f b) { (void)a; return b; }
-VEC_FUNCTION_ATTRIBUTES static v1d v1d_rotl(v1d a, v1d b) { (void)a; return b; }
+VEC_FUNCTION_ATTRIBUTES v1f v1f_rotl(v1f a, v1f b) { (void)a; return b; }
+VEC_FUNCTION_ATTRIBUTES v1d v1d_rotl(v1d a, v1d b) { (void)a; return b; }
 
 /* From my experience, the compiler builtins for clang are better than trying
  * to use *mmintrin headers directly*. I'm going to assume this is true for
@@ -130,31 +129,31 @@ VEC_FUNCTION_ATTRIBUTES static v1d v1d_rotl(v1d a, v1d b) { (void)a; return b; }
 #if defined(__clang__)
 typedef float  v4f __attribute__((ext_vector_type(4), aligned(32)));
 typedef double v2d __attribute__((ext_vector_type(2), aligned(32)));
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0246(v4f a, v4f b) { return __builtin_shufflevector(a, b, 0, 2, 4, 6); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf1357(v4f a, v4f b) { return __builtin_shufflevector(a, b, 1, 3, 5, 7); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0415(v4f a, v4f b) { return __builtin_shufflevector(a, b, 0, 4, 1, 5); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf2637(v4f a, v4f b) { return __builtin_shufflevector(a, b, 2, 6, 3, 7); }
-static VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf02(v2d a, v2d b)   { return __builtin_shufflevector(a, b, 0, 2); }
-static VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf13(v2d a, v2d b)   { return __builtin_shufflevector(a, b, 1, 3); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0246(v4f a, v4f b) { return __builtin_shufflevector(a, b, 0, 2, 4, 6); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf1357(v4f a, v4f b) { return __builtin_shufflevector(a, b, 1, 3, 5, 7); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0415(v4f a, v4f b) { return __builtin_shufflevector(a, b, 0, 4, 1, 5); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf2637(v4f a, v4f b) { return __builtin_shufflevector(a, b, 2, 6, 3, 7); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf02(v2d a, v2d b)   { return __builtin_shufflevector(a, b, 0, 2); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf13(v2d a, v2d b)   { return __builtin_shufflevector(a, b, 1, 3); }
 
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return __builtin_shufflevector(a, b, 1, 2, 3, 4); }
-static VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { return __builtin_shufflevector(a, b, 1, 2); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { return __builtin_shufflevector(a, a, 3, 2, 1, 0); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return __builtin_shufflevector(a, b, 1, 2, 3, 4); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { return __builtin_shufflevector(a, b, 1, 2); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { return __builtin_shufflevector(a, a, 3, 2, 1, 0); }
 
 #else
 #include <stdint.h>
 typedef float  v4f __attribute__((vector_size(16), aligned(32)));
 typedef double v2d __attribute__((vector_size(16), aligned(32)));
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0246(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {0, 2, 4, 6}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf1357(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {1, 3, 5, 7}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0415(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {0, 4, 1, 5}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf2637(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {2, 6, 3, 7}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf02(v2d a, v2d b)   { static const int64_t __attribute__((vector_size(16))) shufmask = {0, 2}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf13(v2d a, v2d b)   { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 3}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0246(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {0, 2, 4, 6}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf1357(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {1, 3, 5, 7}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0415(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {0, 4, 1, 5}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf2637(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {2, 6, 3, 7}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf02(v2d a, v2d b)   { static const int64_t __attribute__((vector_size(16))) shufmask = {0, 2}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf13(v2d a, v2d b)   { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 3}; return __builtin_shuffle(a, b, shufmask); }
 
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {1, 2, 3, 4}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 2};       return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { static const int32_t __attribute__((vector_size(16))) shufmask = {3, 2, 1, 0}; return __builtin_shuffle(a, a, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {1, 2, 3, 4}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 2};       return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { static const int32_t __attribute__((vector_size(16))) shufmask = {3, 2, 1, 0}; return __builtin_shuffle(a, a, shufmask); }
 
 #endif
 
@@ -185,34 +184,34 @@ VEC_BASIC_OPERATIONS(v2d, double, VEC_INITSPLAT2)
 #if defined(__clang__)
 typedef float  v8f __attribute__((ext_vector_type(8), aligned(32)));
 typedef double v4d __attribute__((ext_vector_type(4), aligned(32)));
-static VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0145(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 0, 1, 4, 5); }
-static VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf2367(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 2, 3, 6, 7); }
-static VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0426(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 0, 4, 2, 6); }
-static VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf1537(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 1, 5, 3, 7); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf012389AB(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  1,  2,  3,  8,  9,  10, 11); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf4567CDEF(v8f a, v8f b) { return __builtin_shufflevector(a, b, 4,  5,  6,  7,  12, 13, 14, 15); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf028A46CE(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  2,  8,  10, 4,  6,  12, 14); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf139B57DF(v8f a, v8f b) { return __builtin_shufflevector(a, b, 1,  3,  9,  11, 5,  7,  13, 15); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf08194C5D(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  8,  1,  9,  4,  12, 5,  13); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf2A3B6E7F(v8f a, v8f b) { return __builtin_shufflevector(a, b, 2,  10, 3,  11, 6,  14, 7,  15); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf018945CD(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  1,  8,  9,  4,  5,  12, 13); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf23AB67EF(v8f a, v8f b) { return __builtin_shufflevector(a, b, 2,  3,  10, 11, 6,  7,  14, 15); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0145(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 0, 1, 4, 5); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf2367(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 2, 3, 6, 7); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0426(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 0, 4, 2, 6); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf1537(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 1, 5, 3, 7); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf012389AB(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  1,  2,  3,  8,  9,  10, 11); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf4567CDEF(v8f a, v8f b) { return __builtin_shufflevector(a, b, 4,  5,  6,  7,  12, 13, 14, 15); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf028A46CE(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  2,  8,  10, 4,  6,  12, 14); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf139B57DF(v8f a, v8f b) { return __builtin_shufflevector(a, b, 1,  3,  9,  11, 5,  7,  13, 15); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf08194C5D(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  8,  1,  9,  4,  12, 5,  13); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf2A3B6E7F(v8f a, v8f b) { return __builtin_shufflevector(a, b, 2,  10, 3,  11, 6,  14, 7,  15); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf018945CD(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  1,  8,  9,  4,  5,  12, 13); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf23AB67EF(v8f a, v8f b) { return __builtin_shufflevector(a, b, 2,  3,  10, 11, 6,  7,  14, 15); }
 #else
 #include <stdint.h>
 typedef float  v8f __attribute__((vector_size(32), aligned(32)));
 typedef double v4d __attribute__((vector_size(32), aligned(32)));
-static VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0145(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {0, 1, 4, 5}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf2367(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {2, 3, 6, 7}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0426(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {0, 4, 2, 6}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf1537(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {1, 5, 3, 7}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf012389AB(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  1,  2,  3,  8,  9,  10, 11}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf4567CDEF(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {4,  5,  6,  7,  12, 13, 14, 15}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf028A46CE(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  2,  8,  10, 4,  6,  12, 14}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf139B57DF(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {1,  3,  9,  11, 5,  7,  13, 15}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf08194C5D(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  8,  1,  9,  4,  12, 5,  13}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf2A3B6E7F(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {2,  10, 3,  11, 6,  14, 7,  15}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf018945CD(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  1,  8,  9,  4,  5,  12, 13}; return __builtin_shuffle(a, b, shufmask); }
-static VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf23AB67EF(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {2,  3,  10, 11, 6,  7,  14, 15}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0145(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {0, 1, 4, 5}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf2367(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {2, 3, 6, 7}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0426(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {0, 4, 2, 6}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf1537(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {1, 5, 3, 7}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf012389AB(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  1,  2,  3,  8,  9,  10, 11}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf4567CDEF(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {4,  5,  6,  7,  12, 13, 14, 15}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf028A46CE(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  2,  8,  10, 4,  6,  12, 14}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf139B57DF(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {1,  3,  9,  11, 5,  7,  13, 15}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf08194C5D(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  8,  1,  9,  4,  12, 5,  13}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf2A3B6E7F(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {2,  10, 3,  11, 6,  14, 7,  15}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf018945CD(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  1,  8,  9,  4,  5,  12, 13}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf23AB67EF(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {2,  3,  10, 11, 6,  7,  14, 15}; return __builtin_shuffle(a, b, shufmask); }
 #endif
 
 /* This is awful but generates much better code than the "simple"
@@ -333,14 +332,14 @@ VEC_BASIC_OPERATIONS(v4d, double, VEC_INITSPLAT4)
  * found, don't worry, this macro will not be used - it's just easier to
  * define it here. */
 #define VEC_SSE_BASIC_OPERATIONS(type_, data_, regtyp_, mmtyp_) \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _add(type_ a, type_ b)    { return _ ## regtyp_ ## _add_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _sub(type_ a, type_ b)    { return _ ## regtyp_ ## _sub_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _mul(type_ a, type_ b)    { return _ ## regtyp_ ## _mul_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _ld(const void *ptr)      { return _ ## regtyp_ ## _load_p ## mmtyp_(ptr); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _ld0(const void *ptr)     { return _ ## regtyp_ ## _load_s ## mmtyp_(ptr); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _broadcast(data_ a)       { return _ ## regtyp_ ## _set1_p ## mmtyp_(a); } \
-VEC_FUNCTION_ATTRIBUTES static void  type_ ## _st(void *ptr, type_ val) { _ ## regtyp_ ## _store_p ## mmtyp_(ptr, val); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _neg(type_ a)             { return _ ## regtyp_ ## _xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); }
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return _ ## regtyp_ ## _add_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return _ ## regtyp_ ## _sub_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return _ ## regtyp_ ## _mul_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _ ## regtyp_ ## _load_p ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld0(const void *ptr)     { return _ ## regtyp_ ## _load_s ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _ ## regtyp_ ## _set1_p ## mmtyp_(a); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _ ## regtyp_ ## _store_p ## mmtyp_(ptr, val); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _ ## regtyp_ ## _xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); }
 
 /* Look for SSE to provide implementations of v4f and v2d. */
 #if ((defined(_MSC_VER) && defined(_M_X64)) || (defined(__clang__) && defined(__SSE__))) && (!defined(V4F_EXISTS) || !defined(V2D_EXISTS))
@@ -370,8 +369,8 @@ do { \
 	(out2_) = _mm_shuffle_ps((in1_), (in2_), _MM_SHUFFLE(3, 1, 3, 1)); \
 } while (0)
 
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a) { return _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 1, 2, 3)); }
-static VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(b), _mm_castps_si128(a), 4)); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a) { return _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 1, 2, 3)); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(b), _mm_castps_si128(a), 4)); }
 
 #endif /* V4F_EXISTS */
 
@@ -486,13 +485,13 @@ VEC_SSE_BASIC_OPERATIONS(v4d, double, mm256, d)
 
 typedef float32x4_t v4f;
 
-static VEC_FUNCTION_ATTRIBUTES v4f  v4f_add(v4f a, v4f b)      { return vaddq_f32(a, b); }
-static VEC_FUNCTION_ATTRIBUTES v4f  v4f_sub(v4f a, v4f b)      { return vsubq_f32(a, b); }
-static VEC_FUNCTION_ATTRIBUTES v4f  v4f_mul(v4f a, v4f b)      { return vmulq_f32(a, b); }
-static VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld(const void *ptr)    { return vld1q_f32(ptr); }
-static VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld0(const void *ptr)   { v4f tmp; return vld1q_lane_f32(ptr, tmp, 0); }
-static VEC_FUNCTION_ATTRIBUTES v4f  v4f_broadcast(float a)     { return vld1q_dup_f32(&a); }
-static VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_add(v4f a, v4f b)      { return vaddq_f32(a, b); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_sub(v4f a, v4f b)      { return vsubq_f32(a, b); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_mul(v4f a, v4f b)      { return vmulq_f32(a, b); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld(const void *ptr)    { return vld1q_f32(ptr); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld0(const void *ptr)   { v4f tmp; return vld1q_lane_f32(ptr, tmp, 0); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_broadcast(float a)     { return vld1q_dup_f32(&a); }
+VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 
 #if 0
 /* NEON should be able to do a double load with a single vld1.32 */
