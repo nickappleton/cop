@@ -66,8 +66,10 @@
 #define VEC_FUNCTION_ATTRIBUTES COP_ATTR_UNUSED COP_ATTR_INLINE
 
 #if defined(__clang__) || defined(__GNUC__)
-#define VEC_ALIGN_BEST          __attribute__((aligned(64)))
+#define VEC_ALIGN_BEST __attribute__((aligned(64)))
 /* #elif other compilers... */
+#elif defined(_MSC_VER)
+#define VEC_ALIGN_BEST __declspec(align(64))
 #else
 #define VEC_ALIGN_BEST
 #endif
@@ -331,17 +333,24 @@ VEC_BASIC_OPERATIONS(v4d, double, VEC_INITSPLAT4)
  * found, don't worry, this macro will not be used - it's just easier to
  * define it here. */
 #define VEC_SSE_BASIC_OPERATIONS(type_, data_, regtyp_, mmtyp_) \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _add(type_ a, type_ b)   { return _ ## regtyp_ ## _add_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _sub(type_ a, type_ b)   { return _ ## regtyp_ ## _sub_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _mul(type_ a, type_ b)   { return _ ## regtyp_ ## _mul_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _ld(const void *ptr)     { return _ ## regtyp_ ## _load_p ## mmtyp_(ptr); } \
-VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _broadcast(data_ a)      { return _ ## regtyp_ ## _set1_p ## mmtyp_(a); } \
-VEC_FUNCTION_ATTRIBUTES static void  type_ ## _st(void *ptr, type_ val) { _ ## regtyp_ ## _store_p ## mmtyp_(ptr, val); }
+VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _add(type_ a, type_ b)    { return _ ## regtyp_ ## _add_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _sub(type_ a, type_ b)    { return _ ## regtyp_ ## _sub_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _mul(type_ a, type_ b)    { return _ ## regtyp_ ## _mul_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _ld(const void *ptr)      { return _ ## regtyp_ ## _load_p ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _ld0(const void *ptr)     { return _ ## regtyp_ ## _load_s ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _broadcast(data_ a)       { return _ ## regtyp_ ## _set1_p ## mmtyp_(a); } \
+VEC_FUNCTION_ATTRIBUTES static void  type_ ## _st(void *ptr, type_ val) { _ ## regtyp_ ## _store_p ## mmtyp_(ptr, val); } \
+VEC_FUNCTION_ATTRIBUTES static type_ type_ ## _neg(type_ a)             { return _ ## regtyp_ ## _xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); }
 
 /* Look for SSE to provide implementations of v4f and v2d. */
-#if defined(__clang__) && defined(__SSE__) && (!defined(V4F_EXISTS) || !defined(V2D_EXISTS))
+#if ((defined(_MSC_VER) && defined(_M_X64)) || (defined(__clang__) && defined(__SSE__))) && (!defined(V4F_EXISTS) || !defined(V2D_EXISTS))
 
+#if defined(_MSC_VER)
+#include "intrin.h"
+#else
 #include "xmmintrin.h"
+#include "emmintrin.h"
+#endif
 
 #ifndef V4F_EXISTS
 #define V4F_EXISTS (1)
@@ -360,6 +369,10 @@ do { \
 	(out1_) = _mm_shuffle_ps((in1_), (in2_), _MM_SHUFFLE(2, 0, 2, 0)); \
 	(out2_) = _mm_shuffle_ps((in1_), (in2_), _MM_SHUFFLE(3, 1, 3, 1)); \
 } while (0)
+
+static VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a) { return _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 1, 2, 3)); }
+static VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(b), _mm_castps_si128(a), 4)); }
+
 #endif /* V4F_EXISTS */
 
 #ifndef V2D_EXISTS

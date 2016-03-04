@@ -27,10 +27,22 @@
 #if defined(__clang__) || defined(__GNUC__)
 #define COP_ATTR_UNUSED __attribute__((unused))
 #define COP_ATTR_INLINE __inline__ __attribute__((always_inline))
+#define COP_ATTR_NOINLINE __attribute__((noinline))
+#define COP_ATTR_RESTRICT restrict
+#define COP_HINT_FALSE(cond)    __builtin_expect(cond, 0)
 /* #elif other compilers... */
+#elif defined(_MSC_VER)
+#define COP_ATTR_UNUSED
+#define COP_ATTR_INLINE
+#define COP_ATTR_NOINLINE __declspec(noinline)
+#define COP_ATTR_RESTRICT
+#define COP_HINT_FALSE(cond)    (cond)
 #else
 #define COP_ATTR_UNUSED
 #define COP_ATTR_INLINE
+#define COP_ATTR_NOINLINE
+#define COP_ATTR_RESTRICT
+#define COP_HINT_FALSE(cond)    (cond)
 #endif
 
 #endif /* COP_ATTRIBUES_H */

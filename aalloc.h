@@ -81,7 +81,7 @@ static void *aalloc_align_alloc(struct aalloc *s, size_t size, size_t align)
 
 	/* If there are already allocations and we can fit in this guy... */
 	while (s->top != NULL) {
-		size_t offset = aalloc_alignoffset((unsigned)(s->top->buf + s->top_pos), align - 1);
+		size_t offset = aalloc_alignoffset((size_t)(s->top->buf + s->top_pos), align - 1);
 		if (s->top_pos + offset + size <= s->top->sz) {
 			void *r;
 			s->top_pos += offset;
@@ -111,7 +111,7 @@ static void *aalloc_align_alloc(struct aalloc *s, size_t size, size_t align)
 	s->top_pos = 0;
 
 	if (s->top != NULL) {
-		size_t offset = aalloc_alignoffset((unsigned)(s->top->buf + s->top_pos), align - 1);
+		size_t offset = aalloc_alignoffset((size_t)(s->top->buf + s->top_pos), align - 1);
 		void *r;
 		assert(s->top_pos + offset + size <= s->top->sz);
 		s->top_pos += offset;
@@ -178,7 +178,7 @@ static void *aalloc_malloc(size_t size, size_t alignment, void **ref)
 
 	if (aligned != NULL) {
 		*ref = aligned;
-		aligned = aligned + aalloc_alignoffset((unsigned)aligned, alignment - 1);
+		aligned = aligned + aalloc_alignoffset((size_t)aligned, alignment - 1);
 	}
 
 	return aligned;
