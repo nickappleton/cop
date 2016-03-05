@@ -526,7 +526,7 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld0(const void *ptr)   { v4f tmp; return vld1q_
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_broadcast(float a)     { return vld1q_dup_f32(&a); }
 VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_neg(v4f a)             { return vnegq_f32(a); }
-VEC_FUNCTION_ATTRIBUTES v4f  v4f_reverse(v4f a)         { return vrev64q_f32(a); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_reverse(v4f a)         { v4f b = vrev64q_f32(a); return vcombine_f32(vget_high_f32(b), vget_low_f32(b)); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a)            { return vreinterpretq_f32_u32(vextq_u32(vreinterpretq_u32_f32(a), vreinterpretq_u32_f32(b), 1)); }
 
 #if 0
