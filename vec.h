@@ -18,11 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE. */
 
-#ifndef VEC_H
-#define VEC_H
-
-#include "cop_attributes.h"
-
 /* Reminder for Nick:
  * This is how you build something on OS X to get an armv7 executable purely
  * for examining the disassembly:
@@ -30,8 +25,10 @@
  * Delete this comment at some point when I know a better way to document this
  * so I'll remember it... */
 
-/* Another reminder:
- * Clean this garbage up... you are not proud of this. */
+#ifndef VEC_H
+#define VEC_H
+
+#include "cop_attributes.h"
 
 /* Some overall notes:
  *
@@ -46,8 +43,8 @@
  * library.
  *
  * 2) What's with V4F_EXISTS and V2D_EXISTS etc... why can't they always
- * just exist? Because you probably don't want them. If the system has no
- * vector support, emulating vectors will just eat all your registers and you
+ * just exist? Because you probably don't want them if the system has no
+ * vector support. Emulating vectors will just eat all your registers and you
  * will probably end up with code barely performing better than scalar... if
  * that!
  *
@@ -62,6 +59,58 @@
 #ifndef VEC_DISABLE_COMPILER_BUILTINS
 #define VEC_DISABLE_COMPILER_BUILTINS (0)
 #endif
+
+/* The library implementation is divided up into two parts. Parts one and two
+ * deal with defining a minimal set of vector operators and support macros.
+ *
+ *   1) Compiler specific builtin vector implementations
+ *        Probe the compiler to see if it has support for builtin vectors. We
+ *      also probe to figure out what the platform is so we don't create
+ *      vectors which will not map to the hardware. Make vectors.
+ *   2) Platform specific vector implementations
+ *        It the compiler does not support builtins (or the user has disabled
+ *      them using VEC_DISABLE_COMPILER_BUILTINS), this is where we probe for
+ *      platform-specific intrinsic header files. If we find some and they
+ *      correspond to vector types that have not already been created by the
+ *      compiler builtins, this is where we implement them.
+ *   3) Generic macro implementations
+ *        All other macros required to complete the library API which have not
+ *      already been defined are created using the minimal required platform
+ *      APIs. This permits the platform specific code to provide optimized
+ *      operations where they provide performance benefits or do nothing and
+ *      get a working generic implementation.
+ *
+ * The reason compiler builtins have first preference over the platform
+ * intrinsics is related to some real experiences where the builtins generated
+ * better code than the platform specific intrinsic operators. This may not be
+ * the truth all the time (hence the VEC_DISABLE_COMPILER_BUILTINS) option.
+ * For the skeptics, the "experience" was a piece of code which needed to load
+ * a float into the low word of a vector and do some low-word operations
+ * (rotating it into another vector). Using the SSE intrinsics, this resulted
+ * in all the other vector words being explicitly zeroed using an extra
+ * instruction. This was due to the provided intrinsic not perfectly mapping
+ * to an instruction, but having some extra meaning. This extra operation did
+ * not occur when using the builtin vector operations. When I've done
+ * profiling, the builtins have normally performed better.
+ *
+ * Writing a new platform-specific vector implementation
+ * -----------------------------------------------------
+ * First, you must check that an implementation has not already been
+ * provided (i.e. test that Vxx_EXISTS is not defined) by a compiler builtin
+ * vector implementation. The test for this obviously must in section 2 of
+ * this header (i.e. after the tests and potential implementations of compiler
+ * built-in vectors.
+ *
+ * You must provide implementations for the following functions:
+ *   ld, ld0, st, broadcast, add, sub, neg, mul, rotl, reverse
+ *
+ * You must provide at least macro implementations of
+ *   INTERLEAVE and DEINTERLEAVE
+ *
+ * You define EXISTS to 1.
+ *
+ * You may define any of the extended macro implementations if they will map
+ * closer to available instructions. */
 
 #define VEC_FUNCTION_ATTRIBUTES static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE
 
@@ -104,20 +153,7 @@ VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1)
 VEC_FUNCTION_ATTRIBUTES v1f v1f_rotl(v1f a, v1f b) { (void)a; return b; }
 VEC_FUNCTION_ATTRIBUTES v1d v1d_rotl(v1d a, v1d b) { (void)a; return b; }
 
-/* From my experience, the compiler builtins for clang are better than trying
- * to use *mmintrin headers directly*. I'm going to assume this is true for
- * gcc also. If you would rather rely on other sources of vectorisation, you
- * can define VEC_DISABLE_COMPILER_BUILTINS which will prevent builtins ever
- * being used and if another usable vector implementation is found, it will
- * be used. For compilers which don't have builtin vector support (cough...
- * MSVC cough...), this will not be where our vectors get defined anyways.
- *
- * My "experience" was a piece of code which needed to load a float into the
- * low word of a vector and do some low-word operations. Using the SSE
- * intrinsics, this resulted in all the other vector words being explicitly
- * zeroed using other instructions - this did not occur when using the builtin
- * vector operations. When I've done profiling, the builtins have normally
- * performed better providing the generated code is sensible. */
+/* */
 #if !VEC_DISABLE_COMPILER_BUILTINS
 #if (defined(__clang__) || defined(__GNUC__)) && (defined(__SSE__) || defined(__ARM_NEON__))
 
@@ -325,6 +361,8 @@ VEC_BASIC_OPERATIONS(v4d, double, VEC_INITSPLAT4)
 
 #endif /* defined(__clang__) && defined(__AVX__) */
 #endif /* !VEC_DISABLE_COMPILER_BUILTINS */
+
+/* Section 2) Platform specific vector implementations */
 
 /* This macro is used by the X86/64 SSE vector implementations to construct as
  * many of the basic operations as possible. This is made possible by a
@@ -537,71 +575,115 @@ VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 #undef VEC_BASIC_OPERATIONS
 #undef VEC_SSE_BASIC_OPERATIONS
 
-/* Generic V**_INTERLEAVE2/V**_DEINTERLEAVE2 implementations
+/* Section 3) Generic macro implementations
  * -----------------------------------------------
- * For cases where V**_INTERLEAVE2/V**_DEINTERLEAVE2 have not been defined,
- * we implement the operations using two singular INTERLEAVE operations. */
-#if defined(V4F_EXISTS) && !defined(V4F_INTERLEAVE_STORE)
-#define V4F_INTERLEAVE_STORE(dest_, in1_, in2_) do { \
-	v4f tmp0_, tmp1_; \
-	V4F_INTERLEAVE(tmp0_, tmp1_, in1_, in2_); \
-	v4f_st(dest_, tmp0_); \
-	v4f_st((float *)(dest_) + 4, tmp1_); \
-} while (0)
-#endif
+ * The only required macros to exist at this point are *_INTERLEAVE and
+ * *_DEINTERLEAVE. All other macros can be defined based on these. We do not
+ * want to force backends to define custom implementations for all of the
+ * various transposes/interleaves/double-loads etc, when the generic case
+ * will perform just as well. This minimises the overall code required for
+ * each vector implementation. The following macros will be defined if they
+ * have not already been for each vector type:
+ *
+ *   - *_INTERLEAVE2       - Interleave two vector pairs
+ *   - *_DEINTERLEAVE2     - Deinterleave two vector pairs
+ *   - *_LD2               - Double vector load
+ *   - *_ST2               - Double vector store
+ *   - *_LD2DINT           - Deinterleaving double vector load
+ *   - *_ST2INT            - Interleaving double vector store
+ *   - *_LD2X2DINT         - 2 independent deinterleaving double vector loads
+ *   - *_ST2X2INT          - 2 independent interleaving double vector stores
+ *   - *_TRANSPOSE_INPLACE - Vector transposition */
+
 #if defined(V4F_EXISTS) && !defined(V4F_INTERLEAVE2)
-#define V4F_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { \
-	V4F_INTERLEAVE(out1_, out2_, in1_, in2_); \
-	V4F_INTERLEAVE(out3_, out4_, in3_, in4_); \
-} while (0)
-#endif
-#if defined(V4D_EXISTS) && !defined(V4D_INTERLEAVE2)
-#define V4D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { \
-	V4D_INTERLEAVE(out1_, out2_, in1_, in2_); \
-	V4D_INTERLEAVE(out3_, out4_, in3_, in4_); \
-} while (0)
-#endif
-#if defined(V8F_EXISTS) && !defined(V8F_INTERLEAVE2)
-#define V8F_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { \
-	V8F_INTERLEAVE(out1_, out2_, in1_, in2_); \
-	V8F_INTERLEAVE(out3_, out4_, in3_, in4_); \
-} while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_INTERLEAVE2)
-#define V2D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { \
-	V2D_INTERLEAVE(out1_, out2_, in1_, in2_); \
-	V2D_INTERLEAVE(out3_, out4_, in3_, in4_); \
-} while (0)
+#define V4F_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V4F_INTERLEAVE(out1_, out2_, in1_, in2_); V4F_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
 #endif
 #if defined(V4F_EXISTS) && !defined(V4F_DEINTERLEAVE2)
-#define V4F_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { \
-	V4F_DEINTERLEAVE(out1_, out2_, in1_, in2_); \
-	V4F_DEINTERLEAVE(out3_, out4_, in3_, in4_); \
-} while (0)
+#define V4F_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V4F_DEINTERLEAVE(out1_, out2_, in1_, in2_); V4F_DEINTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
 #endif
-#if defined(V4D_EXISTS) && !defined(V4D_DEINTERLEAVE2)
-#define V4D_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { \
-	V4D_DEINTERLEAVE(out1_, out2_, in1_, in2_); \
-	V4D_DEINTERLEAVE(out3_, out4_, in3_, in4_); \
-} while (0)
+#if defined(V4F_EXISTS) && !defined(V4F_LD2)
+#define V4F_LD2(r0_, r1_, src_)                              do { r0_ = v4f_ld(((const float *)(src_)) + 0); r1_ = v4f_ld(((const float *)(src_)) + 4); } while (0)
 #endif
-#if defined(V2D_EXISTS) && !defined(V2D_DEINTERLEAVE2)
-#define V2D_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { \
-	V2D_DEINTERLEAVE(out1_, out2_, in1_, in2_); \
-	V2D_DEINTERLEAVE(out3_, out4_, in3_, in4_); \
-} while (0)
+ #if defined(V4F_EXISTS) && !defined(V4F_ST2)
+#define V4F_ST2(dest_, r0_, r1_)                             do { v4f_st(((float *)(dest_)) + 0, r0_); v4f_st(((float *)(dest_)) + 4, r1_); } while (0)
 #endif
-#if defined(V8F_EXISTS) && !defined(V8F_DEINTERLEAVE2)
-#define V8F_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { \
-	V8F_DEINTERLEAVE(out1_, out2_, in1_, in2_); \
-	V8F_DEINTERLEAVE(out3_, out4_, in3_, in4_); \
+#if defined(V4F_EXISTS) && !defined(V4F_LD2DINT)
+#define V4F_LD2DINT(r0_, r1_, src_)                          do { v4f tmp1_, tmp2_; V4F_LD2(tmp1_, tmp2_, src_); V4F_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
+#endif
+#if defined(V4F_EXISTS) && !defined(V4F_ST2INT)
+#define V4F_ST2INT(dest_, in1_, in2_)                        do { v4f tmp0_, tmp1_; V4F_INTERLEAVE(tmp0_, tmp1_, in1_, in2_); V4F_ST2(dest_, tmp0_, tmp1_); } while (0)
+#endif
+#if defined(V4F_EXISTS) && !defined(V4F_LD2X2)
+#define V4F_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_)      do { V4F_LD2(r00_, r01_, src0_); V4F_LD2(r10_, r11_, src1_); } while (0)
+#endif
+#if defined(V4F_EXISTS) && !defined(V4F_LD2X2DINT)
+#define V4F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v4f tmp1_, tmp2_, tmp3_, tmp4_; V4F_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); V4F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#endif
+#if defined(V4F_EXISTS) && !defined(V4F_TRANSPOSE_INPLACE)
+#define V4F_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_) do { \
+	v4f t1_, t2_, t3_, t4_; \
+	V4F_INTERLEAVE2(t1_, t2_, t3_, t4_, r1_, r3_, r2_, r4_); \
+	V4F_INTERLEAVE2(r1_, r2_, r3_, r4_, t1_, t3_, t2_, t4_); \
 } while (0)
 #endif
 
-/* Generic transpose implementations
- * -----------------------------------------------
- * For cases where V**_TRANSPOSE_INPLACE has not been defined, we implement
- * transpositions using the generic V**_INTERLEAVE/V**_INTERLEAVE2 macros. */
+#if defined(V2D_EXISTS) && !defined(V2D_INTERLEAVE2)
+#define V2D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V2D_INTERLEAVE(out1_, out2_, in1_, in2_); V2D_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_DEINTERLEAVE2)
+#define V2D_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V2D_DEINTERLEAVE(out1_, out2_, in1_, in2_); V2D_DEINTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_LD2)
+#define V2D_LD2(r0_, r1_, src_)                              do { r0_ = v2d_ld(((const double *)(src_)) + 0); r1_ = v2d_ld(((const double *)(src_)) + 2); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_ST2)
+#define V2D_ST2(dest_, r0_, r1_)                             do { v2d_st(((double *)(dest_)) + 0, r0_); v2d_st(((double *)(dest_)) + 2, r1_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_LD2DINT)
+#define V2D_LD2DINT(r0_, r1_, src_)                          do { v2d tmp1_, tmp2_; V2D_LD2(tmp1_, tmp2_, src_); V2D_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_ST2INT)
+#define V2D_ST2INT(dest_, r0_, r1_)                          do { v2d tmp1_, tmp2_; V2D_INTERLEAVE(tmp1_, tmp2_, r0_, r1_); V2D_ST2(dest_, tmp1_, tmp2_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_LD2X2)
+#define V2D_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_)      do { V2D_LD2(r00_, r01_, src0_); V2D_LD2(r10_, r11_, src1_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_ST2X2)
+#define V2D_ST2X2(dest0_, dest1_, r00_, r01_, r10_, r11_)    do { V2D_ST2(dest0_, r00_, r01_); V2D_ST2(dest1_, r10_, r11_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_LD2X2DINT)
+#define V2D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v2d tmp1_, tmp2_, tmp3_, tmp4_; V2D_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); V2D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_ST2X2INT)
+#define V2D_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v2d tmp1_, tmp2_, tmp3_, tmp4_; V2D_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V2D_ST2X2(dest0_, dest1_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_TRANSPOSE_INPLACE)
+#define V2D_TRANSPOSE_INPLACE(r1_, r2_) do { \
+	v2d t1_, t2_; \
+	V2D_INTERLEAVE(t1_, t2_, r1_, r2_); \
+	r1_ = t1_; \
+	r2_ = t2_; \
+} while (0)
+#endif
+
+#if defined(V8F_EXISTS) && !defined(V8F_INTERLEAVE2)
+#define V8F_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V8F_INTERLEAVE(out1_, out2_, in1_, in2_); V8F_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#endif
+#if defined(V8F_EXISTS) && !defined(V8F_DEINTERLEAVE2)
+#define V8F_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V8F_DEINTERLEAVE(out1_, out2_, in1_, in2_); V8F_DEINTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#endif
+#if defined(V8F_EXISTS) && !defined(V8F_LD2)
+#define V8F_LD2(r0_, r1_, src_)                              do { r0_ = v8f_ld(((const float *)(src_)) + 0); r1_ = v8f_ld(((const float *)(src_)) + 8); } while (0)
+#endif
+#if defined(V8F_EXISTS) && !defined(V8F_LD2DINT)
+#define V8F_LD2DINT(r0_, r1_, src_)                          do { v8f tmp1_, tmp2_; V8F_LD2(tmp1_, tmp2_, src_); V8F_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
+#endif
+#if defined(V8F_EXISTS) && !defined(V8F_LD2X2)
+#define V8F_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_)      do { V8F_LD2(r00_, r01_, src0_); V8F_LD2(r10_, r11_, src1_); } while (0)
+#endif
+#if defined(V8F_EXISTS) && !defined(V8F_LD2X2DINT)
+#define V8F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v8f tmp1_, tmp2_, tmp3_, tmp4_; V8F_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); V8F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#endif
 #if defined(V8F_EXISTS) && !defined(V8F_TRANSPOSE_INPLACE)
 #define V8F_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_, r5_, r6_, r7_, r8_) do { \
 	v8f t1_, t2_, t3_, t4_, t5_, t6_, t7_, t8_; \
@@ -614,161 +696,30 @@ VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 	V8F_INTERLEAVE2(r5_, r6_, r7_, r8_, z3_, z7_, z4_, z8_); \
 } while (0)
 #endif
+
+#if defined(V4D_EXISTS) && !defined(V4D_INTERLEAVE2)
+#define V4D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V4D_INTERLEAVE(out1_, out2_, in1_, in2_); V4D_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#endif
+#if defined(V4D_EXISTS) && !defined(V4D_DEINTERLEAVE2)
+#define V4D_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V4D_DEINTERLEAVE(out1_, out2_, in1_, in2_); V4D_DEINTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#endif
+#if defined(V4D_EXISTS) && !defined(V4D_LD2)
+#define V4D_LD2(r0_, r1_, src_)                              do { r0_ = v4d_ld(((const double *)(src_)) + 0); r1_ = v4d_ld(((const double *)(src_)) + 4); } while (0)
+#endif
+#if defined(V4D_EXISTS) && !defined(V4D_LD2DINT)
+#define V4D_LD2DINT(r0_, r1_, src_)                          do { v4d tmp1_, tmp2_; V4D_LD2(tmp1_, tmp2_, src_); V4D_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
+#endif
+#if defined(V4D_EXISTS) && !defined(V4D_LD2X2)
+#define V4D_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_)      do { V4D_LD2(r00_, r01_, src0_); V4D_LD2(r10_, r11_, src1_); } while (0)
+#endif
+#if defined(V4D_EXISTS) && !defined(V4D_LD2X2DINT)
+#define V4D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v4d tmp1_, tmp2_, tmp3_, tmp4_; V4D_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); V4D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#endif
 #if defined(V4D_EXISTS) && !defined(V4D_TRANSPOSE_INPLACE)
 #define V4D_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_) do { \
 	v4d t1_, t2_, t3_, t4_; \
 	V4D_INTERLEAVE2(t1_, t2_, t3_, t4_, r1_, r3_, r2_, r4_); \
 	V4D_INTERLEAVE2(r1_, r2_, r3_, r4_, t1_, t3_, t2_, t4_); \
-} while (0)
-#endif
-#if defined(V4F_EXISTS) && !defined(V4F_TRANSPOSE_INPLACE)
-#define V4F_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_) do { \
-	v4f t1_, t2_, t3_, t4_; \
-	V4F_INTERLEAVE2(t1_, t2_, t3_, t4_, r1_, r3_, r2_, r4_); \
-	V4F_INTERLEAVE2(r1_, r2_, r3_, r4_, t1_, t3_, t2_, t4_); \
-} while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_TRANSPOSE_INPLACE)
-#define V2D_TRANSPOSE_INPLACE(r1_, r2_) do { \
-	v2d t1_, t2_; \
-	V2D_INTERLEAVE(t1_, t2_, r1_, r2_); \
-	r1_ = t1_; \
-	r2_ = t2_; \
-} while (0)
-#endif
-
-#if defined(V4F_EXISTS) && !defined(V4F_LD2)
-#define V4F_LD2(r0_, r1_, src_) do { \
-	r0_ = v4f_ld(((const float *)(src_)) + 0); \
-	r1_ = v4f_ld(((const float *)(src_)) + 4); \
-} while (0)
-#endif
-#if defined(V4F_EXISTS) && !defined(V4F_LD2DINT)
-#define V4F_LD2DINT(r0_, r1_, src_) do { \
-	v4f tmp1_, tmp2_; \
-	V4F_LD2(tmp1_, tmp2_, src_); \
-	V4F_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); \
-} while (0)
-#endif
-#if defined(V4F_EXISTS) && !defined(V4F_LD2X2)
-#define V4F_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	V4F_LD2(r00_, r01_, src0_); \
-	V4F_LD2(r10_, r11_, src1_); \
-} while (0)
-#endif
-#if defined(V4F_EXISTS) && !defined(V4F_LD2X2DINT)
-#define V4F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	v4f tmp1_, tmp2_, tmp3_, tmp4_; \
-	V4F_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); \
-	V4F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); \
-} while (0)
-#endif
-
-#if defined(V2D_EXISTS) && !defined(V2D_LD2)
-#define V2D_LD2(r0_, r1_, src_) do { \
-	r0_ = v2d_ld(((const double *)(src_)) + 0); \
-	r1_ = v2d_ld(((const double *)(src_)) + 2); \
-} while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_LD2DINT)
-#define V2D_LD2DINT(r0_, r1_, src_) do { \
-	v2d tmp1_, tmp2_; \
-	V2D_LD2(tmp1_, tmp2_, src_); \
-	V2D_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); \
-} while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_LD2X2)
-#define V2D_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	V2D_LD2(r00_, r01_, src0_); \
-	V2D_LD2(r10_, r11_, src1_); \
-} while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_LD2X2DINT)
-#define V2D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	v2d tmp1_, tmp2_, tmp3_, tmp4_; \
-	V2D_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); \
-	V2D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); \
-} while (0)
-#endif
-
-#if defined(V8F_EXISTS) && !defined(V8F_LD2)
-#define V8F_LD2(r0_, r1_, src_) do { \
-	r0_ = v8f_ld(((const float *)(src_)) + 0); \
-	r1_ = v8f_ld(((const float *)(src_)) + 8); \
-} while (0)
-#endif
-#if defined(V8F_EXISTS) && !defined(V8F_LD2DINT)
-#define V8F_LD2DINT(r0_, r1_, src_) do { \
-	v8f tmp1_, tmp2_; \
-	V8F_LD2(tmp1_, tmp2_, src_); \
-	V8F_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); \
-} while (0)
-#endif
-#if defined(V8F_EXISTS) && !defined(V8F_LD2X2)
-#define V8F_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	V8F_LD2(r00_, r01_, src0_); \
-	V8F_LD2(r10_, r11_, src1_); \
-} while (0)
-#endif
-#if defined(V8F_EXISTS) && !defined(V8F_LD2X2DINT)
-#define V8F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	v8f tmp1_, tmp2_, tmp3_, tmp4_; \
-	V8F_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); \
-	V8F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); \
-} while (0)
-#endif
-
-#if defined(V4D_EXISTS) && !defined(V4D_LD2)
-#define V4D_LD2(r0_, r1_, src_) do { \
-	r0_ = v4d_ld(((const double *)(src_)) + 0); \
-	r1_ = v4d_ld(((const double *)(src_)) + 4); \
-} while (0)
-#endif
-#if defined(V4D_EXISTS) && !defined(V4D_LD2DINT)
-#define V4D_LD2DINT(r0_, r1_, src_) do { \
-	v4d tmp1_, tmp2_; \
-	V4D_LD2(tmp1_, tmp2_, src_); \
-	V4D_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); \
-} while (0)
-#endif
-#if defined(V4D_EXISTS) && !defined(V4D_LD2X2)
-#define V4D_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	V4D_LD2(r00_, r01_, src0_); \
-	V4D_LD2(r10_, r11_, src1_); \
-} while (0)
-#endif
-#if defined(V4D_EXISTS) && !defined(V4D_LD2X2DINT)
-#define V4D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	v4d tmp1_, tmp2_, tmp3_, tmp4_; \
-	V4D_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); \
-	V4D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); \
-} while (0)
-#endif
-
-#if defined(V2D_EXISTS) && !defined(V2D_ST2)
-#define V2D_ST2(dest_, r0_, r1_) do { \
-	v2d_st(((double *)(dest_)) + 0, r0_); \
-	v2d_st(((double *)(dest_)) + 2, r1_); \
-} while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_ST2INT)
-#define V2D_ST2INT(dest_, r0_, r1_) do { \
-	v2d tmp1_, tmp2_; \
-	V2D_INTERLEAVE(tmp1_, tmp2_, r0_, r1_); \
-	V2D_ST2(dest_, tmp1_, tmp2_); \
-} while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_ST2X2)
-#define V2D_ST2X2(dest0_, dest1_, r00_, r01_, r10_, r11_) do { \
-	V2D_ST2(dest0_, r00_, r01_); \
-	V2D_ST2(dest1_, r10_, r11_); \
-} while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_ST2X2INT)
-#define V2D_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { \
-	v2d tmp1_, tmp2_, tmp3_, tmp4_; \
-	V2D_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); \
-	V2D_ST2X2(dest0_, dest1_, tmp1_, tmp2_, tmp3_, tmp4_); \
 } while (0)
 #endif
 
