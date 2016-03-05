@@ -22,11 +22,7 @@
  *
  * This is not trying to create a fully-featured threading API - it is just
  * a minimal set that should have reasonable performance on most platforms.
- * Hence the two function thread API.
- *
- *
- *
- * */
+ * Hence the two function thread API. */
 
 #ifndef COP_THREAD_H
 #define COP_THREAD_H

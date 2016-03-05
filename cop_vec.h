@@ -18,19 +18,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE. */
 
-/* Reminder for Nick:
- * This is how you build something on OS X to get an armv7 executable purely
- * for examining the disassembly:
- *   xcrun --sdk iphoneos clang -arch armv7s vecfft.c -O3 -ffast-math
- * Delete this comment at some point when I know a better way to document this
- * so I'll remember it... */
-
-#ifndef COP_VEC_H
-#define COP_VEC_H
-
-#include "cop_attributes.h"
-
-/* Some overall notes:
+/* C Compiler, OS and Platform Abstractions - Floating-Point SIMD Vectors.
+ *
+ * This does not contain everything that can be done. I just add/modify things
+ * in it when I see some code that could be improved.
+ *
+ * Some overall notes:
  *
  * 1) You'll notice there is no multiply-accumulate (mac) instruction. This is
  * intentional. If you write lots of code using macs, unless the compiler
@@ -48,8 +41,20 @@
  * will probably end up with code barely performing better than scalar... if
  * that!
  *
- * The header file only creates macros in a VEC_, V4F_, V8F_, V2D_, V4D_, V2X_
- * V4X_ and V8X_ namespaces. */
+ * The header file only creates macros in VEC_, V1F_, V1D, V4F_, V2D_, V8F_,
+ * V4D_ namespaces. */
+
+/* Reminder for Nick:
+ * This is how you build something on OS X to get an armv7 executable purely
+ * for examining the disassembly:
+ *   xcrun --sdk iphoneos clang -arch armv7s vecfft.c -O3 -ffast-math
+ * Delete this comment at some point when I know a better way to document this
+ * so I'll remember it... */
+
+#ifndef COP_VEC_H
+#define COP_VEC_H
+
+#include "cop_attributes.h"
 
 /* If this macro is set, compiler built-in vector support will be disabled and
  * only intrinsic header files will be used (if found). If the macro is set
@@ -141,17 +146,6 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return -a; }
 #define VEC_INITSPLAT2(a) {(a), (a)}
 #define VEC_INITSPLAT4(a) {(a), (a), (a), (a)}
 #define VEC_INITSPLAT8(a) {(a), (a), (a), (a), (a), (a), (a), (a)}
-
-/* Build the "scalar" v1d and v1f vectors. These really only exist to make
- * pre-processor code generation work nicely. Bury your feelings somewhere
- * other than my email address. */
-typedef float  v1f;
-typedef double v1d;
-VEC_BASIC_OPERATIONS(v1f, float,  VEC_INITSPLAT1)
-VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1)
-
-VEC_FUNCTION_ATTRIBUTES v1f v1f_rotl(v1f a, v1f b) { (void)a; return b; }
-VEC_FUNCTION_ATTRIBUTES v1d v1d_rotl(v1d a, v1d b) { (void)a; return b; }
 
 #if !VEC_DISABLE_COMPILER_BUILTINS
 #if (defined(__clang__) || defined(__GNUC__)) && (defined(__SSE__) || defined(__ARM_NEON__))
@@ -570,11 +564,6 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a)            { return vreinterpretq_f
 
 #endif
 
-/* Don't need any of the macros which we used to construct operators anymore
- * so pull them out of the global namespace. */
-#undef VEC_BASIC_OPERATIONS
-#undef VEC_SSE_BASIC_OPERATIONS
-
 /* Section 3) Generic macro implementations
  * -----------------------------------------------
  * The only required macros to exist at this point are *_INTERLEAVE and
@@ -710,6 +699,45 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a)            { return vreinterpretq_f
 	V4D_INTERLEAVE2(r1_, r2_, r3_, r4_, t1_, t3_, t2_, t4_); \
 } while (0)
 #endif
+
+/* Build the "scalar" v1d and v1f vectors. These really only exist to make
+ * pre-processor code generation work nicely. Bury your feelings somewhere
+ * other than my email address. */
+typedef float  v1f;
+VEC_BASIC_OPERATIONS(v1f, float,  VEC_INITSPLAT1)
+VEC_FUNCTION_ATTRIBUTES v1f v1f_rotl(v1f a, v1f b)           { (void)a; return b; }
+VEC_FUNCTION_ATTRIBUTES v1f v1f_reverse(v1f a)               { return a; }
+#define V1F_INTERLEAVE(out1_, out2_, in1_, in2_)             do { out1_ = in1_; out2_ = in2_; } while (0)
+#define V1F_DEINTERLEAVE(out1_, out2_, in1_, in2_)           do { out1_ = in1_; out2_ = in2_; } while (0)
+#define V1F_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V1F_INTERLEAVE(out1_, out2_, in1_, in2_); V1F_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#define V1F_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V1F_DEINTERLEAVE(out1_, out2_, in1_, in2_); V1F_DEINTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#define V1F_LD2(r0_, r1_, src_)                              do { r0_ = v1f_ld(((const float *)(src_)) + 0); r1_ = v1f_ld(((const float *)(src_)) + 1); } while (0)
+#define V1F_ST2(dest_, r0_, r1_)                             do { v1f_st(((float *)(dest_)) + 0, r0_); v1f_st(((float *)(dest_)) + 1, r1_); } while (0)
+#define V1F_LD2DINT(r0_, r1_, src_)                          do { v1f tmp1_, tmp2_; V1F_LD2(tmp1_, tmp2_, src_); V1F_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
+#define V1F_ST2INT(dest_, in1_, in2_)                        do { v1f tmp0_, tmp1_; V1F_INTERLEAVE(tmp0_, tmp1_, in1_, in2_); V1F_ST2(dest_, tmp0_, tmp1_); } while (0)
+#define V1F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v1f tmp1_, tmp2_, tmp3_, tmp4_; V1F_LD2(tmp1_, tmp2_, src0_); V1F_LD2(tmp3_, tmp4_, src1_); V1F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#define V1F_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v1f tmp1_, tmp2_, tmp3_, tmp4_; V1F_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V1F_ST2(dest0_, tmp1_, tmp2_); V1F_ST2(dest1_, tmp3_, tmp4_); } while (0)
+
+typedef double v1d;
+VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1)
+VEC_FUNCTION_ATTRIBUTES v1d v1d_rotl(v1d a, v1d b)           { (void)a; return b; }
+VEC_FUNCTION_ATTRIBUTES v1d v1d_reverse(v1d a)               { return a; }
+#define V1D_INTERLEAVE(out1_, out2_, in1_, in2_)             do { out1_ = in1_; out2_ = in2_; } while (0)
+#define V1D_DEINTERLEAVE(out1_, out2_, in1_, in2_)           do { out1_ = in1_; out2_ = in2_; } while (0)
+#define V1D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V1D_INTERLEAVE(out1_, out2_, in1_, in2_); V1D_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#define V1D_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V1D_DEINTERLEAVE(out1_, out2_, in1_, in2_); V1D_DEINTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
+#define V1D_LD2(r0_, r1_, src_)                              do { r0_ = v1d_ld(((const double *)(src_)) + 0); r1_ = v1d_ld(((const double *)(src_)) + 1); } while (0)
+#define V1D_ST2(dest_, r0_, r1_)                             do { v1d_st(((double *)(dest_)) + 0, r0_); v1d_st(((double *)(dest_)) + 1, r1_); } while (0)
+#define V1D_LD2DINT(r0_, r1_, src_)                          do { v1d tmp1_, tmp2_; V1D_LD2(tmp1_, tmp2_, src_); V1D_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
+#define V1D_ST2INT(dest_, in1_, in2_)                        do { v1d tmp0_, tmp1_; V1D_INTERLEAVE(tmp0_, tmp1_, in1_, in2_); V1D_ST2(dest_, tmp0_, tmp1_); } while (0)
+#define V1D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v1d tmp1_, tmp2_, tmp3_, tmp4_; V1D_LD2(tmp1_, tmp2_, src0_); V1D_LD2(tmp3_, tmp4_, src1_); V1D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#define V1D_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v1d tmp1_, tmp2_, tmp3_, tmp4_; V1D_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V1D_ST2(dest0_, tmp1_, tmp2_); V1D_ST2(dest1_, tmp3_, tmp4_); } while (0)
+
+/* Don't need any of the macros which we used to construct operators anymore
+ * so pull them out of the global namespace. */
+#undef VEC_BASIC_OPERATIONS
+#undef VEC_SSE_BASIC_OPERATIONS
+#undef VEC_FUNCTION_ATTRIBUTES
 
 #endif /* COP_VEC_H */
 
