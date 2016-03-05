@@ -18,13 +18,23 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE. */
 
-/* C Compiler, OS and Platform Abstractions - Threading Support. */
+/* C Compiler, OS and Platform Abstractions - Trivial Threading Support.
+ *
+ * This is not trying to create a fully-featured threading API - it is just
+ * a minimal set that should have reasonable performance on most platforms.
+ * Hence the two function thread API.
+ *
+ *
+ *
+ * */
 
 #ifndef COP_THREAD_H
 #define COP_THREAD_H
 
+#include <assert.h>
 #include "cop_attributes.h"
 
+/* Error codes returned by this library. */
 #define COP_THREADERR_RESOURCE      (1)
 #define COP_THREADERR_RANGE         (2)
 #define COP_THREADERR_PERMISSIONS   (3)
@@ -32,57 +42,82 @@
 #define COP_THREADERR_UNKNOWN       (5)
 #define COP_THREADERR_OUT_OF_MEMORY (6)
 
-typedef void *(*cop_threadproc)(void *argument);
-
-#if 0
-int
-cop_thread_create
-	(struct cop_thread *thread
-	,cop_threadproc     thread_proc
-	,void              *argument
-	,size_t             stack_size
-	,int                create_detached
-	);
-
-/* It is undefined to call cop_thread_join if the given thread was created
- * using the create_detached flag. The value pointer supplied may be NULL if
- * the return value from the thread is not interesting. */
-int
-cop_thread_join
-	(cop_thread   thread
-	,void        **value
-	);
-
-void
-cop_thread_destroy
-	(cop_thread thread
-	);
-
-int
-cop_mutex_create
-	(cop_mutex *mutex
-	);
-
-void
-cop_mutex_destroy
-	(cop_mutex *mutex
-	);
-
-void
-cop_mutex_lock
-	(cop_mutex *mutex
-	);
-
-void
-cop_mutex_unlock
-	(cop_mutex *mutex
-	);
-
-int
-cop_mutex_trylock
-	(cop_mutex *mutex
-	);
+/* Define the cop_thread and cop_mutex types which are used by the library.
+ * These are exposed so they can be placed on the stack, but you should not
+ * use any of the members directly as it will obviously break the platform-
+ * independent-ness of your code. They are defined at this point so we can
+ * declare the API below. */
+#if defined(_MSC_VER)
+#include "windows.h"
+typedef CRITICAL_SECTION cop_mutex;
+struct cop_thread_arg {
+	void           *arg;
+	void           *ret;
+	cop_threadproc  proc;
+};
+typedef struct {
+	HANDLE                handle;
+	struct cop_thread_arg ret;
+} cop_thread;
+#else
+#include <errno.h>
+#include <pthread.h>
+typedef pthread_t       cop_thread;
+typedef pthread_mutex_t cop_mutex;
 #endif
+
+/* The mutex API consists of the following 5 functions
+ *
+ *   cop_mutex_create   Initializes the supplied mutex object. This function
+ *                      returns zero on success. It may fail if the system
+ *                      does not have enough resources. The resources for the
+ *                      mutex are not released until cop_mutex_destroy is
+ *                      called.
+ *   cop_mutex_destroy  Destroys the supplied mutex object. You may not use
+ *                      any other mutex functions (apart from create) after
+ *                      calling this function.
+ *   cop_mutex_lock     Lock the supplied mutex object. If the mutex is
+ *                      already held, the function blocks until the lock is
+ *                      released and acquired by the calling thread.
+ *   cop_mutex_unlock   Unlock the supplied locked mutex object. It is
+ *                      undefined to call this on a mutex which has not been
+ *                      locked.
+ *   cop_mutex_trylock  Try to lock the supplied mutex object. If the mutex is
+ *                      already held, the function immediately returns 0.
+ *                      Otherwise, the lock was able to be obtained and the
+ *                      function returns 1. */
+static int cop_mutex_create(cop_mutex *mutex);
+static void cop_mutex_destroy(cop_mutex *mutex);
+static void cop_mutex_lock(cop_mutex *mutex);
+static void cop_mutex_unlock(cop_mutex *mutex);
+static int cop_mutex_trylock(cop_mutex *mutex);
+
+/* The threading API consists of the following two functions.
+ *
+ *   cop_thread_create  Create and immediately start a new thread with the
+ *                      entry-point of thread_proc. One pointer argument may
+ *                      be passed to the thread using "argument". stack_size
+ *                      is an optional argument to specify the amount of
+ *                      stack memory which should be supplied to the thread,
+ *                      if it has a value of zero, a system default will be
+ *                      used. If "create_detached" is non-zero, the caller is
+ *                      indicating that they do not want to use
+ *                      cop_thread_join() to wait for the thread to complete
+ *                      and that the resources allocated to the thread should
+ *                      be destroyed as soon as the thread completes. This
+ *                      implies that it is undefined to call cop_thread_join()
+ *                      on a detached thread.
+ *   cop_thread_join    Block the calling thread until the supplied thread
+ *                      completes execution. This will also free all resources
+ *                      allocated to the thread once it has completed. There
+ *                      may only be one thread which is blocked using this
+ *                      function. It is undefined to use this method on a
+ *                      thread that was created as detached.
+ *
+ * The thread entry-point prototype is cop_threadproc. */
+typedef void *(*cop_threadproc)(void *argument);
+static int cop_thread_create(cop_thread *thread, cop_threadproc thread_proc, void *argument, size_t stack_size, int create_detached);
+static int cop_thread_join(cop_thread thread, void **value);
 
 /*****************************************************************************
  * IMPLEMENTATIONS
@@ -90,45 +125,28 @@ cop_mutex_trylock
 
 #if defined(_MSC_VER)
 
-#include "windows.h"
-#include <assert.h>
-
-typedef CRITICAL_SECTION cop_mutex;
-
-struct cop_thread_arg {
-	void           *arg;
-	void           *ret;
-	cop_threadproc  proc;
-};
-
-typedef struct {
-	HANDLE                handle;
-	struct cop_thread_arg ret;
-} cop_thread;
-
 static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_mutex_create(cop_mutex *mutex)
 {
 	InitializeCriticalSection(mutex);
 	return 0;
 }
 
-static COP_ATTR_ALWAYSINLINE void cop_mutex_destroy(cop_mutex *mutex)
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_mutex_destroy(cop_mutex *mutex)
 {
 	DeleteCriticalSection(mutex);
 }
 
-static COP_ATTR_ALWAYSINLINE void cop_mutex_lock(cop_mutex *mutex)
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_mutex_lock(cop_mutex *mutex)
 {
 	EnterCriticalSection(mutex);
 }
 
-static COP_ATTR_ALWAYSINLINE void cop_mutex_unlock(cop_mutex *mutex)
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_mutex_unlock(cop_mutex *mutex)
 {
 	LeaveCriticalSection(mutex);
 }
 
-static COP_ATTR_ALWAYSINLINE int
-cop_mutex_trylock(cop_mutex *mutex)
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_mutex_trylock(cop_mutex *mutex)
 {
 	return TryEnterCriticalSection(mutex);
 }
@@ -140,25 +158,31 @@ static DWORD __stdcall cop_win_thread_proc(LPVOID param)
 	return 0;
 }
 
-static
-int
-cop_thread_create
-	(cop_thread     *thread
-	,cop_threadproc  thread_proc
-	,void            *argument
-	,size_t           stack_size
-	,int              create_detached
-	)
+static COP_ATTR_UNUSED int cop_thread_create(cop_thread *thread, cop_threadproc thread_proc, void *argument, size_t stack_size, int create_detached)
 {
 	thread->ret.arg  = argument;
 	thread->ret.proc = thread_proc;
 	thread->handle   = CreateThread(NULL, stack_size, cop_win_thread_proc, &(thread->ret), 0, NULL);
-	return (thread->handle == NULL);
+	if (thread->handle != NULL) {
+		if (create_detached) {
+			CloseHandle(thread->handle);
+
+			/* We don't have to set the handle to invalid, but this is an
+			 * almost zero cost way to assert if the caller called "join" on
+			 * a detached thread. */
+			thread->handle = NULL;
+		}
+		return 0;
+	}
+	return COP_THREADERR_UNKNOWN;
 }
 
-static int cop_thread_join(cop_thread thread, void **value)
+static COP_ATTR_UNUSED int cop_thread_join(cop_thread thread, void **value)
 {
-	DWORD err = WaitForSingleObject(thread.handle, INFINITE);
+	DWORD err;
+	assert(thread->handle != NULL && "join called on either a detached thread or invalid thread object");
+	err = WaitForSingleObject(thread.handle, INFINITE);
+	CloseHandle(thread.handle);
 	if (err == WAIT_OBJECT_0) {
 		if (value != NULL) {
 			*value = thread.ret.ret;
@@ -169,21 +193,9 @@ static int cop_thread_join(cop_thread thread, void **value)
 	return COP_THREADERR_UNKNOWN;
 }
 
-static void cop_thread_destroy(cop_thread thread)
-{
-	CloseHandle(thread.handle);
-}
-
 #else
 
 /* Use pthreads. */
-
-#include <errno.h>
-#include <assert.h>
-#include <pthread.h>
-
-typedef pthread_t       cop_thread;
-typedef pthread_mutex_t cop_mutex;
 
 static int cop_translate_err(int err)
 {
@@ -271,15 +283,7 @@ static int build_thread
 	return 0;
 }
 
-static COP_ATTR_UNUSED
-int
-cop_thread_create
-	(cop_thread     *thread
-	,cop_threadproc  thread_proc
-	,void            *argument
-	,size_t           stack_size
-	,int              create_detached
-	)
+static COP_ATTR_UNUSED int cop_thread_create(cop_thread *thread, cop_threadproc thread_proc, void *argument, size_t stack_size, int create_detached)
 {
 	pthread_attr_t pattr;
 	int err, err2;
@@ -307,11 +311,6 @@ static COP_ATTR_UNUSED int cop_thread_join(cop_thread thread, void **value)
 		return COP_THREADERR_DEADLOCK;
 	}
 	return 0;
-}
-
-static COP_ATTR_UNUSED void cop_thread_destroy(cop_thread thread)
-{
-	/* No effect for posix threads. */
 }
 
 #endif
