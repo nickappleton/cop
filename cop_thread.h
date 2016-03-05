@@ -20,8 +20,8 @@
 
 /* C Compiler, OS and Platform Abstractions - Threading Support. */
 
-#ifndef COP_THREAD_H_
-#define COP_THREAD_H_
+#ifndef COP_THREAD_H
+#define COP_THREAD_H
 
 #include "cop_attributes.h"
 
@@ -316,4 +316,4 @@ static COP_ATTR_UNUSED void cop_thread_destroy(cop_thread thread)
 
 #endif
 
-#endif /* COP_THREAD_H_ */
+#endif /* COP_THREAD_H */

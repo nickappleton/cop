@@ -19,7 +19,34 @@
  * DEALINGS IN THE SOFTWARE. */
 
 /* C Compiler, OS and Platform Abstractions - Common Compiler Function and
- *                                            Variable Attributes. */
+ *                                            Variable Attributes.
+ *
+ * This header provides the following function-attribute-like macros:
+ *
+ *   COP_ATTR_UNUSED   Declare that a function might not be used (as is a
+ *                     common case in header-only libraries). Example use:
+ *                     to suppress unused function compiler warnings.
+ *   COP_ATTR_NOINLINE Declare that the function should never be inlined.
+ *                     Example use: an optimizing compiler inlines a large
+ *                     function which we are trying to get sampled profiling
+ *                     information for - use this to prevent that.
+ *   COP_ATTR_ALWAYSINLINE Declare that we always want this function to be
+ *                     inlined. There is still no guarantee that inlining will
+ *                     occur.
+ *
+ * The following variable-attribute-like macros:
+ *
+ *   COP_ATTR_RESTRICT Declare that a pointer variable does not alias other
+ *                     pointers. By default, all pointers of compatible types
+ *                     may alias.
+ *
+ * The following compiler-hint macros:
+ *
+ *   COP_HINT_FALSE(condition) This function-like macro should be used with a
+ *                     conditional argument. The macro will always return the
+ *                     result of the condition. It will indicate to supporting
+ *                     compilers that the condition is likely to evaluate to
+ *                     zero. */
 
 #ifndef COP_ATTRIBUES_H
 #define COP_ATTRIBUES_H
