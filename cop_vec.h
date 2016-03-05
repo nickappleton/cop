@@ -712,11 +712,11 @@ VEC_FUNCTION_ATTRIBUTES v1f v1f_reverse(v1f a)               { return a; }
 #define V1F_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V1F_INTERLEAVE(out1_, out2_, in1_, in2_); V1F_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
 #define V1F_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V1F_DEINTERLEAVE(out1_, out2_, in1_, in2_); V1F_DEINTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
 #define V1F_LD2(r0_, r1_, src_)                              do { r0_ = v1f_ld(((const float *)(src_)) + 0); r1_ = v1f_ld(((const float *)(src_)) + 1); } while (0)
+#define V1F_LD2DINT(r0_, r1_, src_)                          V1F_LD2(r0_, r1_, src_)
+#define V1F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { V1F_LD2DINT(r00_, r01_, src0_); V1F_LD2DINT(r10_, r11_, src1_); } while (0)
 #define V1F_ST2(dest_, r0_, r1_)                             do { v1f_st(((float *)(dest_)) + 0, r0_); v1f_st(((float *)(dest_)) + 1, r1_); } while (0)
-#define V1F_LD2DINT(r0_, r1_, src_)                          do { v1f tmp1_, tmp2_; V1F_LD2(tmp1_, tmp2_, src_); V1F_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
-#define V1F_ST2INT(dest_, in1_, in2_)                        do { v1f tmp0_, tmp1_; V1F_INTERLEAVE(tmp0_, tmp1_, in1_, in2_); V1F_ST2(dest_, tmp0_, tmp1_); } while (0)
-#define V1F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v1f tmp1_, tmp2_, tmp3_, tmp4_; V1F_LD2(tmp1_, tmp2_, src0_); V1F_LD2(tmp3_, tmp4_, src1_); V1F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
-#define V1F_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v1f tmp1_, tmp2_, tmp3_, tmp4_; V1F_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V1F_ST2(dest0_, tmp1_, tmp2_); V1F_ST2(dest1_, tmp3_, tmp4_); } while (0)
+#define V1F_ST2INT(dest_, r0_, r1_)                          V1F_ST2(dest_, r0_, r1_)
+#define V1F_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { V1F_ST2INT(dest0_, r00_, r01_); V1F_ST2INT(dest1_, r10_, r11_); } while (0)
 
 typedef double v1d;
 VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1)
@@ -727,11 +727,11 @@ VEC_FUNCTION_ATTRIBUTES v1d v1d_reverse(v1d a)               { return a; }
 #define V1D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V1D_INTERLEAVE(out1_, out2_, in1_, in2_); V1D_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
 #define V1D_DEINTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_) do { V1D_DEINTERLEAVE(out1_, out2_, in1_, in2_); V1D_DEINTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
 #define V1D_LD2(r0_, r1_, src_)                              do { r0_ = v1d_ld(((const double *)(src_)) + 0); r1_ = v1d_ld(((const double *)(src_)) + 1); } while (0)
+#define V1D_LD2DINT(r0_, r1_, src_)                          V1D_LD2(r0_, r1_, src_)
+#define V1D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { V1D_LD2DINT(r00_, r01_, src0_); V1D_LD2DINT(r10_, r11_, src1_); } while (0)
 #define V1D_ST2(dest_, r0_, r1_)                             do { v1d_st(((double *)(dest_)) + 0, r0_); v1d_st(((double *)(dest_)) + 1, r1_); } while (0)
-#define V1D_LD2DINT(r0_, r1_, src_)                          do { v1d tmp1_, tmp2_; V1D_LD2(tmp1_, tmp2_, src_); V1D_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
-#define V1D_ST2INT(dest_, in1_, in2_)                        do { v1d tmp0_, tmp1_; V1D_INTERLEAVE(tmp0_, tmp1_, in1_, in2_); V1D_ST2(dest_, tmp0_, tmp1_); } while (0)
-#define V1D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v1d tmp1_, tmp2_, tmp3_, tmp4_; V1D_LD2(tmp1_, tmp2_, src0_); V1D_LD2(tmp3_, tmp4_, src1_); V1D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
-#define V1D_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v1d tmp1_, tmp2_, tmp3_, tmp4_; V1D_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V1D_ST2(dest0_, tmp1_, tmp2_); V1D_ST2(dest1_, tmp3_, tmp4_); } while (0)
+#define V1D_ST2INT(dest_, r0_, r1_)                          V1D_ST2(dest_, r0_, r1_)
+#define V1D_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { V1D_ST2INT(dest0_, r00_, r01_); V1D_ST2INT(dest1_, r10_, r11_); } while (0)
 
 /* Don't need any of the macros which we used to construct operators anymore
  * so pull them out of the global namespace. */
