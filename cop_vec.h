@@ -62,7 +62,7 @@
  * will exist. If the compiler does not support a built-in vector type, this
  * macro has no effect. */
 #ifndef VEC_DISABLE_COMPILER_BUILTINS
-#define VEC_DISABLE_COMPILER_BUILTINS (1)
+#define VEC_DISABLE_COMPILER_BUILTINS (0)
 #endif
 
 /* The library implementation is divided up into two parts. Parts one and two
