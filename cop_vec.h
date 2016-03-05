@@ -57,7 +57,7 @@
  * will exist. If the compiler does not support a built-in vector type, this
  * macro has no effect. */
 #ifndef VEC_DISABLE_COMPILER_BUILTINS
-#define VEC_DISABLE_COMPILER_BUILTINS (0)
+#define VEC_DISABLE_COMPILER_BUILTINS (1)
 #endif
 
 /* The library implementation is divided up into two parts. Parts one and two
@@ -172,6 +172,7 @@ VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf13(v2d a, v2d b)   { return __builtin_shuffl
 VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return __builtin_shufflevector(a, b, 1, 2, 3, 4); }
 VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { return __builtin_shufflevector(a, b, 1, 2); }
 VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { return __builtin_shufflevector(a, a, 3, 2, 1, 0); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_reverse(v2d a)     { return __builtin_shufflevector(a, a, 1, 0); }
 
 #else
 #include <stdint.h>
@@ -187,6 +188,7 @@ VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf13(v2d a, v2d b)   { static const int64_t __
 VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {1, 2, 3, 4}; return __builtin_shuffle(a, b, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 2};       return __builtin_shuffle(a, b, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { static const int32_t __attribute__((vector_size(16))) shufmask = {3, 2, 1, 0}; return __builtin_shuffle(a, a, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_reverse(v2d a)     { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 0};       return __builtin_shuffle(a, a, shufmask); }
 
 #endif
 
@@ -384,6 +386,7 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _ ## r
 #else
 #include "xmmintrin.h"
 #include "emmintrin.h"
+#include "tmmintrin.h"
 #endif
 
 #ifndef V4F_EXISTS
@@ -391,6 +394,8 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _ ## r
 
 typedef __m128 v4f;
 VEC_SSE_BASIC_OPERATIONS(v4f, float, mm, s)
+VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { return _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 1, 2, 3)); }
+VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(b), _mm_castps_si128(a), 4)); }
 
 #define V4F_INTERLEAVE(out1_, out2_, in1_, in2_) \
 do { \
@@ -404,9 +409,6 @@ do { \
 	(out2_) = _mm_shuffle_ps((in1_), (in2_), _MM_SHUFFLE(3, 1, 3, 1)); \
 } while (0)
 
-VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a) { return _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 1, 2, 3)); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(b), _mm_castps_si128(a), 4)); }
-
 #endif /* V4F_EXISTS */
 
 #ifndef V2D_EXISTS
@@ -414,6 +416,8 @@ VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return _mm_castsi128_ps(_mm
 
 typedef __m128d v2d;
 VEC_SSE_BASIC_OPERATIONS(v2d, double, mm, d)
+VEC_FUNCTION_ATTRIBUTES v2d v2d_reverse(v2d a)     { return _mm_shuffle_pd(a, a, _MM_SHUFFLE2(0, 1)); }
+VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { return _mm_shuffle_pd(a, b, _MM_SHUFFLE2(0, 1)); }
 
 #define V2D_INTERLEAVE(out1_, out2_, in1_, in2_) \
 do { \
