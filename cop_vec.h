@@ -137,8 +137,8 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return a + b;
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return a - b; } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return a * b; } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return *((type_ *)ptr); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld0(const void *ptr)     { return (type_)(*(const float *)(ptr)); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return (type_)initsplat_(a); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld0(const void *ptr)     { return type_ ## _broadcast(*(const float *)(ptr)); } \
 VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { *((type_ *)ptr) = val; } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return -a; }
 
@@ -509,7 +509,7 @@ VEC_SSE_BASIC_OPERATIONS(v4d, double, mm256, d)
 #endif
 
 /* Look for NEON to provide implementation of v4f. */
-#if defined(__clang__) && defined(__ARM_NEON__) && !defined(V4F_EXISTS)
+#if (defined(__clang__) || defined(__GNUC__)) && defined(__ARM_NEON__) && !defined(V4F_EXISTS)
 
 #include "arm_neon.h"
 
@@ -527,7 +527,7 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_broadcast(float a)     { return vld1q_dup_f32(&
 VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_neg(v4f a)             { return vnegq_f32(a); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_reverse(v4f a)         { v4f b = vrev64q_f32(a); return vcombine_f32(vget_high_f32(b), vget_low_f32(b)); }
-VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a)            { return vreinterpretq_f32_u32(vextq_u32(vreinterpretq_u32_f32(a), vreinterpretq_u32_f32(b), 1)); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a, v4f b)     { return vreinterpretq_f32_u32(vextq_u32(vreinterpretq_u32_f32(a), vreinterpretq_u32_f32(b), 1)); }
 
 #if 0
 /* NEON should be able to do a double load with a single vld1.32 */
