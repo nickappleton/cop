@@ -153,11 +153,8 @@ VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1)
 VEC_FUNCTION_ATTRIBUTES v1f v1f_rotl(v1f a, v1f b) { (void)a; return b; }
 VEC_FUNCTION_ATTRIBUTES v1d v1d_rotl(v1d a, v1d b) { (void)a; return b; }
 
-/* */
 #if !VEC_DISABLE_COMPILER_BUILTINS
 #if (defined(__clang__) || defined(__GNUC__)) && (defined(__SSE__) || defined(__ARM_NEON__))
-
-//#include "arm_neon.h"
 
 #define V4F_EXISTS (1)
 #define V2D_EXISTS (1)
@@ -532,6 +529,7 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_broadcast(float a)     { return vld1q_dup_f32(&
 VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_neg(v4f a)             { return vnegq_f32(a); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_reverse(v4f a)         { return vrev64q_f32(a); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a)            { return vreinterpretq_f32_u32(vextq_u32(vreinterpretq_u32_f32(a), vreinterpretq_u32_f32(b), 1)); }
 
 #if 0
 /* NEON should be able to do a double load with a single vld1.32 */
