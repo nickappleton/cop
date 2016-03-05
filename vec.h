@@ -530,16 +530,14 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld(const void *ptr)    { return vld1q_f32(ptr);
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld0(const void *ptr)   { v4f tmp; return vld1q_lane_f32(ptr, tmp, 0); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_broadcast(float a)     { return vld1q_dup_f32(&a); }
 VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_neg(v4f a)             { return vnegq_f32(a); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_reverse(v4f a)         { return vrev64q_f32(a); }
 
 #if 0
 /* NEON should be able to do a double load with a single vld1.32 */
 #define V4F_LD2(r0_, r1_, src_) do { \
 	r0_ = v4f_ld(((const float *)(src_)) + 0); \
 	r1_ = v4f_ld(((const float *)(src_)) + 4); \
-} while (0)
-#define V4F_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_) do { \
-	V4F_LD2(r00_, r01_, src0_); \
-	V4F_LD2(r10_, r11_, src1_); \
 } while (0)
 #endif
 
@@ -604,7 +602,7 @@ VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 #if defined(V4F_EXISTS) && !defined(V4F_LD2)
 #define V4F_LD2(r0_, r1_, src_)                              do { r0_ = v4f_ld(((const float *)(src_)) + 0); r1_ = v4f_ld(((const float *)(src_)) + 4); } while (0)
 #endif
- #if defined(V4F_EXISTS) && !defined(V4F_ST2)
+#if defined(V4F_EXISTS) && !defined(V4F_ST2)
 #define V4F_ST2(dest_, r0_, r1_)                             do { v4f_st(((float *)(dest_)) + 0, r0_); v4f_st(((float *)(dest_)) + 4, r1_); } while (0)
 #endif
 #if defined(V4F_EXISTS) && !defined(V4F_LD2DINT)
@@ -613,11 +611,11 @@ VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 #if defined(V4F_EXISTS) && !defined(V4F_ST2INT)
 #define V4F_ST2INT(dest_, in1_, in2_)                        do { v4f tmp0_, tmp1_; V4F_INTERLEAVE(tmp0_, tmp1_, in1_, in2_); V4F_ST2(dest_, tmp0_, tmp1_); } while (0)
 #endif
-#if defined(V4F_EXISTS) && !defined(V4F_LD2X2)
-#define V4F_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_)      do { V4F_LD2(r00_, r01_, src0_); V4F_LD2(r10_, r11_, src1_); } while (0)
-#endif
 #if defined(V4F_EXISTS) && !defined(V4F_LD2X2DINT)
-#define V4F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v4f tmp1_, tmp2_, tmp3_, tmp4_; V4F_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); V4F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#define V4F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v4f tmp1_, tmp2_, tmp3_, tmp4_; V4F_LD2(tmp1_, tmp2_, src0_); V4F_LD2(tmp3_, tmp4_, src1_); V4F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#endif
+#if defined(V4F_EXISTS) && !defined(V4F_ST2X2INT)
+#define V4F_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v4f tmp1_, tmp2_, tmp3_, tmp4_; V4F_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V4F_ST2(dest0_, tmp1_, tmp2_); V4F_ST2(dest1_, tmp3_, tmp4_); } while (0)
 #endif
 #if defined(V4F_EXISTS) && !defined(V4F_TRANSPOSE_INPLACE)
 #define V4F_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_) do { \
@@ -645,17 +643,11 @@ VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 #if defined(V2D_EXISTS) && !defined(V2D_ST2INT)
 #define V2D_ST2INT(dest_, r0_, r1_)                          do { v2d tmp1_, tmp2_; V2D_INTERLEAVE(tmp1_, tmp2_, r0_, r1_); V2D_ST2(dest_, tmp1_, tmp2_); } while (0)
 #endif
-#if defined(V2D_EXISTS) && !defined(V2D_LD2X2)
-#define V2D_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_)      do { V2D_LD2(r00_, r01_, src0_); V2D_LD2(r10_, r11_, src1_); } while (0)
-#endif
-#if defined(V2D_EXISTS) && !defined(V2D_ST2X2)
-#define V2D_ST2X2(dest0_, dest1_, r00_, r01_, r10_, r11_)    do { V2D_ST2(dest0_, r00_, r01_); V2D_ST2(dest1_, r10_, r11_); } while (0)
-#endif
 #if defined(V2D_EXISTS) && !defined(V2D_LD2X2DINT)
-#define V2D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v2d tmp1_, tmp2_, tmp3_, tmp4_; V2D_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); V2D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#define V2D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v2d tmp1_, tmp2_, tmp3_, tmp4_; V2D_LD2(tmp1_, tmp2_, src0_); V2D_LD2(tmp3_, tmp4_, src1_); V2D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
 #endif
 #if defined(V2D_EXISTS) && !defined(V2D_ST2X2INT)
-#define V2D_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v2d tmp1_, tmp2_, tmp3_, tmp4_; V2D_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V2D_ST2X2(dest0_, dest1_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#define V2D_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v2d tmp1_, tmp2_, tmp3_, tmp4_; V2D_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V2D_ST2(dest0_, tmp1_, tmp2_); V2D_ST2(dest1_, tmp3_, tmp4_); } while (0)
 #endif
 #if defined(V2D_EXISTS) && !defined(V2D_TRANSPOSE_INPLACE)
 #define V2D_TRANSPOSE_INPLACE(r1_, r2_) do { \
@@ -678,11 +670,8 @@ VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 #if defined(V8F_EXISTS) && !defined(V8F_LD2DINT)
 #define V8F_LD2DINT(r0_, r1_, src_)                          do { v8f tmp1_, tmp2_; V8F_LD2(tmp1_, tmp2_, src_); V8F_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
 #endif
-#if defined(V8F_EXISTS) && !defined(V8F_LD2X2)
-#define V8F_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_)      do { V8F_LD2(r00_, r01_, src0_); V8F_LD2(r10_, r11_, src1_); } while (0)
-#endif
 #if defined(V8F_EXISTS) && !defined(V8F_LD2X2DINT)
-#define V8F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v8f tmp1_, tmp2_, tmp3_, tmp4_; V8F_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); V8F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#define V8F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v8f tmp1_, tmp2_, tmp3_, tmp4_; V8F_LD2(tmp1_, tmp2_, src0_); V8F_LD2(tmp3_, tmp4_, src1_); V8F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
 #endif
 #if defined(V8F_EXISTS) && !defined(V8F_TRANSPOSE_INPLACE)
 #define V8F_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_, r5_, r6_, r7_, r8_) do { \
@@ -709,11 +698,8 @@ VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 #if defined(V4D_EXISTS) && !defined(V4D_LD2DINT)
 #define V4D_LD2DINT(r0_, r1_, src_)                          do { v4d tmp1_, tmp2_; V4D_LD2(tmp1_, tmp2_, src_); V4D_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
 #endif
-#if defined(V4D_EXISTS) && !defined(V4D_LD2X2)
-#define V4D_LD2X2(r00_, r01_, r10_, r11_, src0_, src1_)      do { V4D_LD2(r00_, r01_, src0_); V4D_LD2(r10_, r11_, src1_); } while (0)
-#endif
 #if defined(V4D_EXISTS) && !defined(V4D_LD2X2DINT)
-#define V4D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v4d tmp1_, tmp2_, tmp3_, tmp4_; V4D_LD2X2(tmp1_, tmp2_, tmp3_, tmp4_, src0_, src1_); V4D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#define V4D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v4d tmp1_, tmp2_, tmp3_, tmp4_; V4D_LD2(tmp1_, tmp2_, src0_); V4D_LD2(tmp3_, tmp4_, src1_); V4D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
 #endif
 #if defined(V4D_EXISTS) && !defined(V4D_TRANSPOSE_INPLACE)
 #define V4D_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_) do { \
