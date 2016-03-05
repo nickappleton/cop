@@ -246,60 +246,31 @@ static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_mutex_trylock(cop_mutex *mu
 	return (err == 0);
 }
 
-static int build_thread
-	(cop_thread     *thread
-	,pthread_attr_t  *pattr
-	,cop_threadproc  thread_proc
-	,void            *argument
-	,size_t           stack_size
-	,int              create_detached
-	)
-{
-	int err;
-
-	if (stack_size != 0) {
-		err = pthread_attr_setstacksize(pattr, stack_size);
-		if (err) {
-			assert(err == EINVAL);
-			return COP_THREADERR_RANGE;
-		}
-	}
-
-	/* The only time we expect setdetachstate to fail is when the supplied
-	 * argument is invalid. There is no other defined reason for it to fail.
-	 * We assume success in release builds and I think this is OK. */
-	err = pthread_attr_setdetachstate(pattr, create_detached ? PTHREAD_CREATE_DETACHED : PTHREAD_CREATE_JOINABLE);
-	assert(err == 0); (void)err;
-
-	err = pthread_create(thread, pattr, thread_proc, argument);
-	if (err == EPERM)
-		return COP_THREADERR_PERMISSIONS;
-
-	if (err) {
-		assert(err == EAGAIN);
-		return COP_THREADERR_RESOURCE;
-	}
-
-	return 0;
-}
-
 static COP_ATTR_UNUSED int cop_thread_create(cop_thread *thread, cop_threadproc thread_proc, void *argument, size_t stack_size, int create_detached)
 {
 	pthread_attr_t pattr;
 	int err, err2;
-
-	err = pthread_attr_init(&pattr);
-	if (err) {
-		assert(err == ENOMEM);
+	if ((err = pthread_attr_init(&pattr)) != 0) {
+		assert(err == ENOMEM); (void)err;
 		return COP_THREADERR_RESOURCE;
 	}
-
-	err = build_thread(thread, &pattr, thread_proc, argument, stack_size, create_detached);
-
+	if (stack_size != 0 && (err = pthread_attr_setstacksize(&pattr, stack_size)) != 0) {
+		assert(err == EINVAL);
+		err = COP_THREADERR_RANGE;
+	}
+	if (err == 0 && (pthread_attr_setdetachstate(&pattr, create_detached ? PTHREAD_CREATE_DETACHED : PTHREAD_CREATE_JOINABLE)) != 0) {
+		err = COP_THREADERR_UNKNOWN;
+	}
+	if (err == 0 && (err = pthread_create(thread, &pattr, thread_proc, argument)) != 0) {
+		if (err == EPERM)
+			err = COP_THREADERR_PERMISSIONS;
+		else {
+			assert(err == EAGAIN);
+			err = COP_THREADERR_RESOURCE;
+		}
+	}
 	err2 = pthread_attr_destroy(&pattr);
-	assert(err2 == 0);
-	(void)err2;
-
+	assert(err2 == 0); (void)err2;
 	return err;
 }
 
