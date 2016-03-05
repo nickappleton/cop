@@ -25,8 +25,8 @@
  * Delete this comment at some point when I know a better way to document this
  * so I'll remember it... */
 
-#ifndef VEC_H
-#define VEC_H
+#ifndef COP_VEC_H
+#define COP_VEC_H
 
 #include "cop_attributes.h"
 
@@ -707,5 +707,5 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a)            { return vreinterpretq_f
 } while (0)
 #endif
 
-#endif /* VEC_H */
+#endif /* COP_VEC_H */
 
