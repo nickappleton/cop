@@ -18,8 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE. */
 
-#ifndef AALLOC_H
-#define AALLOC_H
+#ifndef COP_ALLOC_H
+#define COP_ALLOC_H
 
 #include "cop_attributes.h"
 #include <assert.h>
@@ -184,4 +184,4 @@ static void *aalloc_malloc(size_t size, size_t alignment, void **ref)
 	return aligned;
 }
 
-#endif /* AALLOC_H */
+#endif /* COP_ALLOC_H */
