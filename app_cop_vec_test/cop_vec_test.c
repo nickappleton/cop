@@ -49,6 +49,20 @@ static int vectype_ ## _tests(void) \
 	for (i = 0; i < (veclen_)*MAX((veclen_), 4); i++) { \
 		in[i] = prime_data[i]; \
 	} \
+	/* Load element 0 test */ \
+	a = vectype_ ## _ld(in); \
+	b = vectype_ ## _lde0(a, in + (veclen_)); \
+	vectype_ ## _st(out, b); \
+	for (i = 0, err = 0.0f; i < (veclen_); i++) { \
+		basetype_ e = out[i] - (prime_data[(i == 0) ? (i + (veclen_)) : i]); \
+		err += e*e; \
+	} \
+	if (err > 1e-10) { \
+		printf("  " #vectype_ "_lde0() test failed\n"); \
+		failures++; \
+	} else { \
+		printf("  " #vectype_ "_lde0() test passed\n"); \
+	} \
 	/* Addition test */ \
 	a = vectype_ ## _ld(in); \
 	b = vectype_ ## _ld(in + (veclen_)); \
