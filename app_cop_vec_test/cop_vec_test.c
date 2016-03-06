@@ -278,6 +278,12 @@ MAKE_BASIC_TESTS(V4F, v4f, float,  4)
 #if V2D_EXISTS
 MAKE_BASIC_TESTS(V2D, v2d, double, 2)
 #endif
+#if V8F_EXISTS
+MAKE_BASIC_TESTS(V8F, v8f, float,  8)
+#endif
+#if V4D_EXISTS
+MAKE_BASIC_TESTS(V4D, v4d, double, 4)
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -294,6 +300,16 @@ int main(int argc, char *argv[])
 	failures += v4f_tests();
 #else
 	printf("no v4f type - skipping tests\n");
+#endif
+#if V8F_EXISTS
+	failures += v8f_tests();
+#else
+	printf("no v8f type - skipping tests\n");
+#endif
+#if V4D_EXISTS
+	failures += v4d_tests();
+#else
+	printf("no v4d type - skipping tests\n");
 #endif
 
 	if (failures) {

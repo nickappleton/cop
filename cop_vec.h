@@ -217,6 +217,8 @@ VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0145(v4d a, v4d b)     { return __builtin_sh
 VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf2367(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 2, 3, 6, 7); }
 VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0426(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 0, 4, 2, 6); }
 VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf1537(v4d a, v4d b)     { return __builtin_shufflevector(a, b, 1, 5, 3, 7); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_rotl(v4d a, v4d b)         { return __builtin_shufflevector(a, b, 1, 2, 3, 4); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_reverse(v4d a)             { return __builtin_shufflevector(a, a, 3, 2, 1, 0); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf012389AB(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  1,  2,  3,  8,  9,  10, 11); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf4567CDEF(v8f a, v8f b) { return __builtin_shufflevector(a, b, 4,  5,  6,  7,  12, 13, 14, 15); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf028A46CE(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  2,  8,  10, 4,  6,  12, 14); }
@@ -225,6 +227,8 @@ VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf08194C5D(v8f a, v8f b) { return __builtin_sh
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf2A3B6E7F(v8f a, v8f b) { return __builtin_shufflevector(a, b, 2,  10, 3,  11, 6,  14, 7,  15); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf018945CD(v8f a, v8f b) { return __builtin_shufflevector(a, b, 0,  1,  8,  9,  4,  5,  12, 13); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf23AB67EF(v8f a, v8f b) { return __builtin_shufflevector(a, b, 2,  3,  10, 11, 6,  7,  14, 15); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_rotl(v8f a, v8f b)         { return __builtin_shufflevector(a, b, 1,  2,  3,  4,  5,  6,  7,  8); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_reverse(v8f a)             { return __builtin_shufflevector(a, a, 7,  6,  5,  4,  3,  2,  1,  0); }
 #else
 #include <stdint.h>
 typedef float  v8f __attribute__((vector_size(32), aligned(32)));
@@ -233,6 +237,8 @@ VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0145(v4d a, v4d b)     { static const int64_
 VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf2367(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {2, 3, 6, 7}; return __builtin_shuffle(a, b, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf0426(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {0, 4, 2, 6}; return __builtin_shuffle(a, b, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v4d v4d_shuf1537(v4d a, v4d b)     { static const int64_t __attribute__((vector_size(32))) shufmask = {1, 5, 3, 7}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_rotl(v4d a, v4d b)         { static const int64_t __attribute__((vector_size(32))) shufmask = {1, 2, 3, 4}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_reverse(v4d a)             { static const int64_t __attribute__((vector_size(32))) shufmask = {3, 2, 1, 0}; return __builtin_shuffle(a, a, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf012389AB(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  1,  2,  3,  8,  9,  10, 11}; return __builtin_shuffle(a, b, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf4567CDEF(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {4,  5,  6,  7,  12, 13, 14, 15}; return __builtin_shuffle(a, b, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf028A46CE(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  2,  8,  10, 4,  6,  12, 14}; return __builtin_shuffle(a, b, shufmask); }
@@ -241,6 +247,8 @@ VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf08194C5D(v8f a, v8f b) { static const int32_
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf2A3B6E7F(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {2,  10, 3,  11, 6,  14, 7,  15}; return __builtin_shuffle(a, b, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf018945CD(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {0,  1,  8,  9,  4,  5,  12, 13}; return __builtin_shuffle(a, b, shufmask); }
 VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf23AB67EF(v8f a, v8f b) { static const int32_t __attribute__((vector_size(32))) shufmask = {2,  3,  10, 11, 6,  7,  14, 15}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_rotl(v8f a, v8f b)         { static const int32_t __attribute__((vector_size(32))) shufmask = {1,  2,  3,  4,  5,  6,  7,  8}; return __builtin_shuffle(a, b, shufmask); }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_reverse(v8f a)             { static const int32_t __attribute__((vector_size(32))) shufmask = {7,  6,  5,  4,  3,  2,  1,  0}; return __builtin_shuffle(a, a, shufmask); }
 #endif
 
 /* This is awful but generates much better code than the "simple"
@@ -658,11 +666,20 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a, v4f b)     { return vreinterpretq_f
 #if defined(V8F_EXISTS) && !defined(V8F_LD2)
 #define V8F_LD2(r0_, r1_, src_)                              do { r0_ = v8f_ld(((const float *)(src_)) + 0); r1_ = v8f_ld(((const float *)(src_)) + 8); } while (0)
 #endif
+#if defined(V8F_EXISTS) && !defined(V8F_ST2)
+#define V8F_ST2(dest_, r0_, r1_)                             do { v8f_st(((float *)(dest_)) + 0, r0_); v8f_st(((float *)(dest_)) + 8, r1_); } while (0)
+#endif
 #if defined(V8F_EXISTS) && !defined(V8F_LD2DINT)
 #define V8F_LD2DINT(r0_, r1_, src_)                          do { v8f tmp1_, tmp2_; V8F_LD2(tmp1_, tmp2_, src_); V8F_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
 #endif
+#if defined(V8F_EXISTS) && !defined(V8F_ST2INT)
+#define V8F_ST2INT(dest_, in1_, in2_)                        do { v8f tmp0_, tmp1_; V8F_INTERLEAVE(tmp0_, tmp1_, in1_, in2_); V8F_ST2(dest_, tmp0_, tmp1_); } while (0)
+#endif
 #if defined(V8F_EXISTS) && !defined(V8F_LD2X2DINT)
 #define V8F_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v8f tmp1_, tmp2_, tmp3_, tmp4_; V8F_LD2(tmp1_, tmp2_, src0_); V8F_LD2(tmp3_, tmp4_, src1_); V8F_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#endif
+#if defined(V8F_EXISTS) && !defined(V8F_ST2X2INT)
+#define V8F_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v8f tmp1_, tmp2_, tmp3_, tmp4_; V8F_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V8F_ST2(dest0_, tmp1_, tmp2_); V8F_ST2(dest1_, tmp3_, tmp4_); } while (0)
 #endif
 #if defined(V8F_EXISTS) && !defined(V8F_TRANSPOSE_INPLACE)
 #define V8F_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_, r5_, r6_, r7_, r8_) do { \
@@ -686,11 +703,20 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a, v4f b)     { return vreinterpretq_f
 #if defined(V4D_EXISTS) && !defined(V4D_LD2)
 #define V4D_LD2(r0_, r1_, src_)                              do { r0_ = v4d_ld(((const double *)(src_)) + 0); r1_ = v4d_ld(((const double *)(src_)) + 4); } while (0)
 #endif
+#if defined(V4D_EXISTS) && !defined(V4D_ST2)
+#define V4D_ST2(dest_, r0_, r1_)                             do { v4d_st(((double *)(dest_)) + 0, r0_); v4d_st(((double *)(dest_)) + 4, r1_); } while (0)
+#endif
 #if defined(V4D_EXISTS) && !defined(V4D_LD2DINT)
 #define V4D_LD2DINT(r0_, r1_, src_)                          do { v4d tmp1_, tmp2_; V4D_LD2(tmp1_, tmp2_, src_); V4D_DEINTERLEAVE(r0_, r1_, tmp1_, tmp2_); } while (0)
 #endif
+#if defined(V4D_EXISTS) && !defined(V4D_ST2INT)
+#define V4D_ST2INT(dest_, r0_, r1_)                          do { v4d tmp1_, tmp2_; V4D_INTERLEAVE(tmp1_, tmp2_, r0_, r1_); V4D_ST2(dest_, tmp1_, tmp2_); } while (0)
+#endif
 #if defined(V4D_EXISTS) && !defined(V4D_LD2X2DINT)
 #define V4D_LD2X2DINT(r00_, r01_, r10_, r11_, src0_, src1_)  do { v4d tmp1_, tmp2_, tmp3_, tmp4_; V4D_LD2(tmp1_, tmp2_, src0_); V4D_LD2(tmp3_, tmp4_, src1_); V4D_DEINTERLEAVE2(r00_, r01_, r10_, r11_, tmp1_, tmp2_, tmp3_, tmp4_); } while (0)
+#endif
+#if defined(V4D_EXISTS) && !defined(V4D_ST2X2INT)
+#define V4D_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { v4d tmp1_, tmp2_, tmp3_, tmp4_; V4D_INTERLEAVE2(tmp1_, tmp2_, tmp3_, tmp4_, r00_, r01_, r10_, r11_); V4D_ST2(dest0_, tmp1_, tmp2_); V4D_ST2(dest1_, tmp3_, tmp4_); } while (0)
 #endif
 #if defined(V4D_EXISTS) && !defined(V4D_TRANSPOSE_INPLACE)
 #define V4D_TRANSPOSE_INPLACE(r1_, r2_, r3_, r4_) do { \
