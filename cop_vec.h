@@ -107,10 +107,10 @@
  * built-in vectors.
  *
  * You must provide implementations for the following functions:
- *   ld, ld0, st, broadcast, add, sub, neg, mul, rotl, reverse
+ *   ld, st, lde0, broadcast, add, sub, neg, mul, rotl, reverse
  *
  * You must provide at least macro implementations of
- *   INTERLEAVE and DEINTERLEAVE
+ *   INTERLEAVE, DEINTERLEAVE
  *
  * You define EXISTS to 1.
  *
@@ -132,13 +132,13 @@
  * support using regular operators to operate on the vector - so this macro
  * will generate those operations. This macro is always used for the v1d and
  * v1f types which only really exist as a convenience. */
-#define VEC_BASIC_OPERATIONS(type_, data_, initsplat_) \
+#define VEC_BASIC_OPERATIONS(type_, data_, initsplat_, acc0_) \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return a + b; } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return a - b; } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return a * b; } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return *((type_ *)ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { a acc0_ = *((data_ *)ptr); return a; } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return (type_)initsplat_(a); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld0(const void *ptr)     { return type_ ## _broadcast(*(const float *)(ptr)); } \
 VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { *((type_ *)ptr) = val; } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return -a; }
 
@@ -200,8 +200,8 @@ VEC_FUNCTION_ATTRIBUTES v2d v2d_reverse(v2d a)     { static const int64_t __attr
 } while (0)
 #define V2D_INTERLEAVE(out1_, out2_, in1_, in2_) V2D_DEINTERLEAVE(out1_, out2_, in1_, in2_)
 
-VEC_BASIC_OPERATIONS(v4f, float, VEC_INITSPLAT4)
-VEC_BASIC_OPERATIONS(v2d, double, VEC_INITSPLAT2)
+VEC_BASIC_OPERATIONS(v4f, float, VEC_INITSPLAT4, [0])
+VEC_BASIC_OPERATIONS(v2d, double, VEC_INITSPLAT2, [0])
 
 #endif /* (defined(__clang__) || defined(__GNUC__)) && defined(__SSE__) */
 
@@ -349,8 +349,8 @@ VEC_FUNCTION_ATTRIBUTES v8f v8f_shuf23AB67EF(v8f a, v8f b) { static const int32_
 	r8_ = v8f_shuf4567CDEF(z4_, z8_); /* r07 r17 r27 r37 r47 r57 r67 r77 */ \
 } while (0)
 
-VEC_BASIC_OPERATIONS(v8f, float, VEC_INITSPLAT8)
-VEC_BASIC_OPERATIONS(v4d, double, VEC_INITSPLAT4)
+VEC_BASIC_OPERATIONS(v8f, float, VEC_INITSPLAT8, [0])
+VEC_BASIC_OPERATIONS(v4d, double, VEC_INITSPLAT4, [0])
 
 #endif /* defined(__clang__) && defined(__AVX__) */
 #endif /* !VEC_DISABLE_COMPILER_BUILTINS */
@@ -367,7 +367,7 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return _ ## r
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return _ ## regtyp_ ## _sub_p ## mmtyp_(a, b); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return _ ## regtyp_ ## _mul_p ## mmtyp_(a, b); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _ ## regtyp_ ## _load_p ## mmtyp_(ptr); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld0(const void *ptr)     { return _ ## regtyp_ ## _load_s ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { return _ ## regtyp_ ## _move_s ## mmtyp_(a, _ ## regtyp_ ## _load_s ## mmtyp_(ptr)); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _ ## regtyp_ ## _set1_p ## mmtyp_(a); } \
 VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _ ## regtyp_ ## _store_p ## mmtyp_(ptr, val); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _ ## regtyp_ ## _xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); }
@@ -522,7 +522,7 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_add(v4f a, v4f b)      { return vaddq_f32(a, b)
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_sub(v4f a, v4f b)      { return vsubq_f32(a, b); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_mul(v4f a, v4f b)      { return vmulq_f32(a, b); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld(const void *ptr)    { return vld1q_f32(ptr); }
-VEC_FUNCTION_ATTRIBUTES v4f  v4f_ld0(const void *ptr)   { v4f tmp; return vld1q_lane_f32(ptr, tmp, 0); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_lde0(v4f a, const void *ptr) { return vld1q_lane_f32(ptr, a, 0); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_broadcast(float a)     { return vld1q_dup_f32(&a); }
 VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_neg(v4f a)             { return vnegq_f32(a); }
@@ -704,7 +704,8 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a, v4f b)     { return vreinterpretq_f
  * pre-processor code generation work nicely. Bury your feelings somewhere
  * other than my email address. */
 typedef float  v1f;
-VEC_BASIC_OPERATIONS(v1f, float,  VEC_INITSPLAT1)
+#define VEC_NOTHING
+VEC_BASIC_OPERATIONS(v1f, float,  VEC_INITSPLAT1, VEC_NOTHING)
 VEC_FUNCTION_ATTRIBUTES v1f v1f_rotl(v1f a, v1f b)           { (void)a; return b; }
 VEC_FUNCTION_ATTRIBUTES v1f v1f_reverse(v1f a)               { return a; }
 #define V1F_INTERLEAVE(out1_, out2_, in1_, in2_)             do { out1_ = in1_; out2_ = in2_; } while (0)
@@ -719,7 +720,7 @@ VEC_FUNCTION_ATTRIBUTES v1f v1f_reverse(v1f a)               { return a; }
 #define V1F_ST2X2INT(dest0_, dest1_, r00_, r01_, r10_, r11_) do { V1F_ST2INT(dest0_, r00_, r01_); V1F_ST2INT(dest1_, r10_, r11_); } while (0)
 
 typedef double v1d;
-VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1)
+VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1, VEC_NOTHING)
 VEC_FUNCTION_ATTRIBUTES v1d v1d_rotl(v1d a, v1d b)           { (void)a; return b; }
 VEC_FUNCTION_ATTRIBUTES v1d v1d_reverse(v1d a)               { return a; }
 #define V1D_INTERLEAVE(out1_, out2_, in1_, in2_)             do { out1_ = in1_; out2_ = in2_; } while (0)
@@ -735,6 +736,7 @@ VEC_FUNCTION_ATTRIBUTES v1d v1d_reverse(v1d a)               { return a; }
 
 /* Don't need any of the macros which we used to construct operators anymore
  * so pull them out of the global namespace. */
+#undef VEC_NOTHING
 #undef VEC_BASIC_OPERATIONS
 #undef VEC_SSE_BASIC_OPERATIONS
 #undef VEC_FUNCTION_ATTRIBUTES
