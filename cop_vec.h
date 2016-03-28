@@ -370,15 +370,25 @@ VEC_BASIC_OPERATIONS(v4d, double, VEC_INITSPLAT4, [0])
  * consistent naming of intrinsic functions. If none of the SSE headers are
  * found, don't worry, this macro will not be used - it's just easier to
  * define it here. */
-#define VEC_SSE_BASIC_OPERATIONS(type_, data_, regtyp_, mmtyp_) \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return _ ## regtyp_ ## _add_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return _ ## regtyp_ ## _sub_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return _ ## regtyp_ ## _mul_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _ ## regtyp_ ## _load_p ## mmtyp_(ptr); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { return _ ## regtyp_ ## _move_s ## mmtyp_(a, _ ## regtyp_ ## _load_s ## mmtyp_(ptr)); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _ ## regtyp_ ## _set1_p ## mmtyp_(a); } \
-VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _ ## regtyp_ ## _store_p ## mmtyp_(ptr, val); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _ ## regtyp_ ## _xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); }
+#define VEC_SSE_BASIC_OPERATIONS(type_, data_, mmtyp_) \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return _mm_add_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return _mm_sub_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return _mm_mul_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _mm_load_p ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { return _mm_move_s ## mmtyp_(a, _mm_load_s ## mmtyp_(ptr)); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _mm_set1_p ## mmtyp_(a); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _mm_store_p ## mmtyp_(ptr, val); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _mm_xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); }
+
+#define VEC_AVX_BASIC_OPERATIONS(type_, data_, mmtyp_) \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return _mm256_add_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return _mm256_sub_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return _mm256_mul_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _mm256_load_p ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { return _mm256_blend_p ## mmtyp_(a, _mm256_broadcast_s ## mmtyp_(ptr), 1); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _mm256_broadcast_s ## mmtyp_(&a); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _mm256_store_p ## mmtyp_(ptr, val); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { static const data_ nz = -((data_)0.0); return _mm256_xor_p ## mmtyp_(a, _mm256_broadcast_s ## mmtyp_(&nz)); }
 
 /* Look for SSE to provide implementations of v4f and v2d. */
 #if ((defined(_MSC_VER) && defined(_M_X64)) || (defined(__clang__) && defined(__SSE__))) && (!defined(V4F_EXISTS) || !defined(V2D_EXISTS))
@@ -395,7 +405,7 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _ ## r
 #define V4F_EXISTS (1)
 
 typedef __m128 v4f;
-VEC_SSE_BASIC_OPERATIONS(v4f, float, mm, s)
+VEC_SSE_BASIC_OPERATIONS(v4f, float, s)
 VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { return _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 1, 2, 3)); }
 VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(b), _mm_castps_si128(a), 4)); }
 
@@ -417,7 +427,7 @@ do { \
 #define V2D_EXISTS (1)
 
 typedef __m128d v2d;
-VEC_SSE_BASIC_OPERATIONS(v2d, double, mm, d)
+VEC_SSE_BASIC_OPERATIONS(v2d, double, d)
 VEC_FUNCTION_ATTRIBUTES v2d v2d_reverse(v2d a)     { return _mm_shuffle_pd(a, a, _MM_SHUFFLE2(0, 1)); }
 VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { return _mm_shuffle_pd(a, b, _MM_SHUFFLE2(0, 1)); }
 
@@ -441,7 +451,9 @@ do { \
 #define V8F_EXISTS (1)
 
 typedef __m256 v8f;
-VEC_SSE_BASIC_OPERATIONS(v8f, float, mm256, s)
+VEC_AVX_BASIC_OPERATIONS(v8f, float, s)
+VEC_FUNCTION_ATTRIBUTES v8f v8f_reverse(v8f a)     { return a; }
+VEC_FUNCTION_ATTRIBUTES v8f v8f_rotl(v8f a, v8f b) { return a; }
 
 #define V8F_DEINTERLEAVE(out1_, out2_, in1_, in2_) do { \
 	v8f Z1_, Z2_; \
@@ -494,7 +506,9 @@ VEC_SSE_BASIC_OPERATIONS(v8f, float, mm256, s)
 #define V4D_EXISTS (1)
 
 typedef __m256d v4d;
-VEC_SSE_BASIC_OPERATIONS(v4d, double, mm256, d)
+VEC_AVX_BASIC_OPERATIONS(v4d, double, d)
+VEC_FUNCTION_ATTRIBUTES v4d v4d_reverse(v4d a)     { return a; }
+VEC_FUNCTION_ATTRIBUTES v4d v4d_rotl(v4d a, v4d b) { return a; }
 
 #define V4D_DEINTERLEAVE(out1_, out2_, in1_, in2_) do { \
 	v4d Z1_, Z2_; \

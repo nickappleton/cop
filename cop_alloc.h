@@ -28,8 +28,6 @@
 
 struct aalloc;
 
-static COP_ATTR_UNUSED void *aalloc_malloc(size_t size, size_t alignment, void **ref);
-
 static COP_ATTR_UNUSED void aalloc_push(struct aalloc *s);
 static COP_ATTR_UNUSED void aalloc_merge_pop(struct aalloc *s);
 static COP_ATTR_UNUSED void aalloc_pop(struct aalloc *s);
@@ -165,23 +163,6 @@ static void aalloc_pop(struct aalloc *s)
 	s->sp--;
 	s->top     = s->stack[s->sp].top;
 	s->top_pos = s->stack[s->sp].top_pos;
-}
-
-static void *aalloc_malloc(size_t size, size_t alignment, void **ref)
-{
-	unsigned char *aligned;
-
-	assert(ref != NULL);
-	assert((alignment & (alignment - 1)) == 0);
-
-	aligned = malloc(size + alignment - 1);
-
-	if (aligned != NULL) {
-		*ref = aligned;
-		aligned = aligned + aalloc_alignoffset((size_t)aligned, alignment - 1);
-	}
-
-	return aligned;
 }
 
 #endif /* COP_ALLOC_H */
