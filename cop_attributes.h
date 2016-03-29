@@ -51,25 +51,39 @@
 #ifndef COP_ATTRIBUES_H
 #define COP_ATTRIBUES_H
 
+#ifdef __STDC_VERSION__
+#if (__STDC_VERSION__ >= 199901L)
+#define COP_ATTR_RESTRICT restrict
+#endif
+#endif
+
 #if defined(__clang__) || defined(__GNUC__)
 #define COP_ATTR_UNUSED         __attribute__((unused))
 #define COP_ATTR_ALWAYSINLINE   __inline__ __attribute__((always_inline))
 #define COP_ATTR_NOINLINE       __attribute__((noinline))
-#define COP_ATTR_RESTRICT       restrict
 #define COP_HINT_FALSE(cond)    __builtin_expect(cond, 0)
-/* #elif other compilers... */
+
+#ifndef COP_ATTR_RESTRICT
+#define COP_ATTR_RESTRICT       __restrict__
+#endif
 #elif defined(_MSC_VER)
 #define COP_ATTR_UNUSED
 #define COP_ATTR_ALWAYSINLINE
 #define COP_ATTR_NOINLINE       __declspec(noinline)
-#define COP_ATTR_RESTRICT
 #define COP_HINT_FALSE(cond)    (cond)
+
+#ifndef COP_ATTR_RESTRICT
+#define COP_ATTR_RESTRICT       __restrict
+#endif
 #else
 #define COP_ATTR_UNUSED
 #define COP_ATTR_ALWAYSINLINE
 #define COP_ATTR_NOINLINE
-#define COP_ATTR_RESTRICT
 #define COP_HINT_FALSE(cond)    (cond)
+#endif
+
+#ifndef COP_ATTR_RESTRICT
+#define COP_ATTR_RESTRICT
 #endif
 
 #endif /* COP_ATTRIBUES_H */
