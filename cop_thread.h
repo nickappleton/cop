@@ -38,6 +38,8 @@
 #define COP_THREADERR_UNKNOWN       (5)
 #define COP_THREADERR_OUT_OF_MEMORY (6)
 
+typedef void *(*cop_threadproc)(void *argument);
+
 /* Define the cop_thread and cop_mutex types which are used by the library.
  * These are exposed so they can be placed on the stack, but you should not
  * use any of the members directly as it will obviously break the platform-
@@ -111,7 +113,6 @@ static int cop_mutex_trylock(cop_mutex *mutex);
  *                      thread that was created as detached.
  *
  * The thread entry-point prototype is cop_threadproc. */
-typedef void *(*cop_threadproc)(void *argument);
 static int cop_thread_create(cop_thread *thread, cop_threadproc thread_proc, void *argument, size_t stack_size, int create_detached);
 static int cop_thread_join(cop_thread thread, void **value);
 
@@ -176,7 +177,7 @@ static COP_ATTR_UNUSED int cop_thread_create(cop_thread *thread, cop_threadproc 
 static COP_ATTR_UNUSED int cop_thread_join(cop_thread thread, void **value)
 {
 	DWORD err;
-	assert(thread->handle != NULL && "join called on either a detached thread or invalid thread object");
+	assert(thread.handle != NULL && "join called on either a detached thread or invalid thread object");
 	err = WaitForSingleObject(thread.handle, INFINITE);
 	CloseHandle(thread.handle);
 	if (err == WAIT_OBJECT_0) {
