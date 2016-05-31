@@ -23,21 +23,23 @@
  * This is completely system dependent. Using this header may not work.
  *
  * Don't rely on this API staying the same... it doesn't do everything I want
- * it to do yet. */
+ * it to do yet and it doesn't even work on Windows. */
 
 #ifndef COP_FILEMAP
 #define COP_FILEMAP
 
 #include "cop_attributes.h"
 #include <assert.h>
+#include <stdint.h>
 
 struct cop_filemap {
 	void   *ptr;
 	size_t  size;
 };
 
-#define COP_FILEMAP_FLAG_R    (0x1)
-#define COP_FILEMAP_FLAG_W    (0x2)
+#define COP_FILEMAP_FLAG_R      (0x1)
+#define COP_FILEMAP_FLAG_W      (0x2)
+#define COP_FILEMAP_SHARED      (0x4)
 
 #define COP_FILEMAP_ERR_FILE    (1)
 #define COP_FILEMAP_ERR_MAPPING (2)
@@ -95,7 +97,7 @@ static COP_ATTR_UNUSED int cop_filemap_open(struct cop_filemap *map, const char 
 	}
 
 	map->size = fs.st_size;
-	map->ptr  = mmap(0, fs.st_size, prot, MAP_PRIVATE, fd, 0);
+	map->ptr  = mmap(0, fs.st_size, prot, (flags & COP_FILEMAP_SHARED) ? MAP_SHARED : MAP_PRIVATE, fd, 0);
 
 	close(fd);
 
