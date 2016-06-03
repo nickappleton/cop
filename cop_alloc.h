@@ -23,6 +23,7 @@
 
 #include "cop_attributes.h"
 #include <stddef.h>
+#include <stdint.h> /* SIZE_MAX */
 
 /* Returns the maximum amount of memory that can be locked to physical pages
  * by the process. A return value of zero means either:
