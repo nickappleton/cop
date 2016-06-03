@@ -22,18 +22,30 @@
 #define COP_ALLOC_H
 
 #include "cop_attributes.h"
+#include <stddef.h>
+
+/* Returns the maximum amount of memory that can be locked to physical pages
+ * by the process. A return value of zero means either:
+ *   no pages can be locked
+ *   the number of lockable pages cannot be queried or
+ *   it is unknown how many pages can be locked.
+ * A return value of SIZE_MAX indicates that there is no limit imposed on the
+ * number of pages which may be locked. Otherwise, the return value is roughly
+ * how many pages can be locked. */
+static COP_ATTR_UNUSED size_t cop_memory_query_current_lockable();
 
 #ifdef __linux__
 #include <unistd.h>
-#include <sys/mman.h>
+#include <sys/mman.h>     /* mmap */
+#include <sys/time.h>     /* getrlimit */
+#include <sys/resource.h> /* getrlimit */
 #endif
-
 #ifdef __APPLE__
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#include <sys/mman.h>
+#include <sys/sysctl.h>   /* sysctl */
+#include <sys/mman.h>     /* mmap */
+#include <sys/time.h>     /* getrlimit */
+#include <sys/resource.h> /* getrlimit */
 #endif
-
 #if _WIN32
 #include <windows.h>
 #endif
@@ -76,6 +88,18 @@ static COP_ATTR_UNUSED size_t cop_memory_query_system_memory()
 	return (GlobalMemoryStatusEx(&memstatus)) ? memstatus.ullTotalPhys : 0;
 #else
 #error "do not know how to get system memory"
+#endif
+}
+
+static COP_ATTR_UNUSED size_t cop_memory_query_current_lockable()
+{
+#if defined(__linux__) || defined(__APPLE__)
+	struct rlimit rlim;
+	if (!getrlimit(RLIMIT_MEMLOCK, &rlim))
+		return (rlim.rlim_cur == RLIM_INFINITY) ? SIZE_MAX : rlim.rlim_cur;
+	return 0;
+#else
+#error "implement me"
 #endif
 }
 
