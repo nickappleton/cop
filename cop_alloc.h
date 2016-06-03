@@ -98,6 +98,9 @@ static COP_ATTR_UNUSED size_t cop_memory_query_current_lockable()
 	if (!getrlimit(RLIMIT_MEMLOCK, &rlim))
 		return (rlim.rlim_cur == RLIM_INFINITY) ? SIZE_MAX : rlim.rlim_cur;
 	return 0;
+#elif _WIN32
+	SIZE_T smin, smax;
+	return (GetProcessWorkingSetSize(GetCurrentProcess(), &smin, &smax)) ? smax : 0;
 #else
 #error "implement me"
 #endif
