@@ -34,6 +34,10 @@
 #include <sys/mman.h>
 #endif
 
+#if _WIN32
+#include <windows.h>
+#endif
+
 static COP_ATTR_UNUSED size_t cop_memory_query_page_size()
 {
 #ifdef __linux__
@@ -45,6 +49,10 @@ static COP_ATTR_UNUSED size_t cop_memory_query_page_size()
 	size_t value = 0;
 	size_t valuelen = sizeof(value);
 	return (sysctl(name, namelen, &value, &valuelen, NULL, 0) == 0) ? value : 0;
+#elif _WIN32
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	return sysinfo.dwPageSize;
 #else
 #error "do not know how to get page size"
 #endif
@@ -62,6 +70,10 @@ static COP_ATTR_UNUSED size_t cop_memory_query_system_memory()
 	size_t value = 0;
 	size_t valuelen = sizeof(value);
 	return (sysctl(name, namelen, &value, &valuelen, NULL, 0) == 0) ? value : 0;
+#elif _WIN32
+	MEMORYSTATUSEX memstatus;
+	memstatus.dwLength = sizeof(memstatus);
+	return (GlobalMemoryStatusEx(&memstatus)) ? memstatus.ullTotalPhys : 0;
 #else
 #error "do not know how to get system memory"
 #endif
@@ -106,9 +118,15 @@ static void aalloc_init(struct aalloc *s, size_t reserve_sz, size_t default_alig
 	s->sp            = 0;
 	s->stack[s->sp]  = 0;
 	s->protect_sz    = 0;
+#if _WIN32
+	s->base          = VirtualAlloc(NULL, s->reserve_sz, MEM_RESERVE, PAGE_NOACCESS);
+	if (s->base == NULL)
+		abort();
+#else
 	s->base          = mmap(NULL, s->reserve_sz, PROT_NONE, MAP_SHARED | MAP_ANON, -1, 0);
 	if (s->base == MAP_FAILED)
 		abort();
+#endif
 }
 
 static size_t aalloc_alignoffset(size_t val, size_t align_mask)
@@ -131,9 +149,13 @@ static void *aalloc_align_alloc(struct aalloc *s, size_t size, size_t align)
 		size_t new_sz;
 		new_sz = offset + size;
 		new_sz = s->grow_sz * ((new_sz + s->grow_sz - 1) / s->grow_sz);
-		printf("growing to %lu\n", new_sz);
+#if _WIN32
+		if (VirtualAlloc(s->base + s->protect_sz, new_sz - s->protect_sz, MEM_COMMIT, PAGE_READWRITE) == NULL)
+			return NULL;
+#else
 		if (mprotect(s->base, new_sz, PROT_READ | PROT_WRITE) == -1)
 			return NULL;
+#endif
 		s->protect_sz = new_sz;
 	}
 
@@ -148,7 +170,11 @@ static void *aalloc_alloc(struct aalloc *s, size_t size)
 
 static void aalloc_free(struct aalloc *s)
 {
+#if _WIN32
+	VirtualFree(s->base, 0, MEM_RELEASE);
+#else
 	munmap(s->base, s->reserve_sz);
+#endif
 }
 
 static void aalloc_push(struct aalloc *s)
