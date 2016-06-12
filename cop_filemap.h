@@ -37,11 +37,22 @@ struct cop_filemap {
 	size_t  size;
 };
 
+/* This flag will permit reads to the mapped memory. */
 #define COP_FILEMAP_FLAG_R      (0x1)
+
+/* This flag will permit writes to the mapped memory. This does not mean that
+ * writes will be carried through to the underlying file; if that behaviour is
+ * desired, COP_FILEMAP_SHARED must also be set. */
 #define COP_FILEMAP_FLAG_W      (0x2)
+
+/* This flag indicates that writes into the mapped memory should be carried
+ * through to the underlying file. */
 #define COP_FILEMAP_SHARED      (0x4)
 
+/* The mapping could not be constructed due to a file access error. */
 #define COP_FILEMAP_ERR_FILE    (1)
+
+/* The mapping could not be created because of a system mapping problem. */
 #define COP_FILEMAP_ERR_MAPPING (2)
 
 static int  cop_filemap_open(struct cop_filemap *map, const char *filename, unsigned flags);

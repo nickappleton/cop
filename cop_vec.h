@@ -781,5 +781,27 @@ VEC_FUNCTION_ATTRIBUTES v1d v1d_reverse(v1d a)               { return a; }
 #undef VEC_SSE_BASIC_OPERATIONS
 #undef VEC_FUNCTION_ATTRIBUTES
 
+#if defined(V8F_EXISTS)
+#define VLF_WIDTH (8)
+#define VLF_UP    V8F
+#define VLF_LOW   v8f
+#define VLF_PAD_LENGTH(len) ((len) + ((8u - (len & 7u)) & 7u))
+#elif defined(V4F_EXISTS)
+#define VLF_WIDTH (4)
+#define VLF_UP    V4F
+#define VLF_LOW   v4f
+#define VLF_PAD_LENGTH(len) ((len) + ((4u - (len & 3u)) & 3u))
+#else
+#define VLF_WIDTH (1)
+#define VLF_UP    V1F
+#define VLF_LOW   v1f
+#define VLF_PAD_LENGTH(len) (len)
+#endif
+
+typedef VLF_LOW vlf;
+#define vlf_st VLF_LOW##_st
+#define vlf_ld VLF_LOW##_ld
+
+
 #endif /* COP_VEC_H */
 
