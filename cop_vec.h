@@ -779,29 +779,45 @@ VEC_FUNCTION_ATTRIBUTES v1d v1d_reverse(v1d a)               { return a; }
 #undef VEC_NOTHING
 #undef VEC_BASIC_OPERATIONS
 #undef VEC_SSE_BASIC_OPERATIONS
+#undef VEC_AVX_BASIC_OPERATIONS
 #undef VEC_FUNCTION_ATTRIBUTES
 
 #if defined(V8F_EXISTS)
-#define VLF_WIDTH (8)
-#define VLF_UP    V8F
-#define VLF_LOW   v8f
+typedef v8f vlf;
+#define VLF_WIDTH      (8)
+#define VLF_HI_OP(op_) V8F ## _ ## op_
+#define VLF_LO_OP(op_) v8f ## _ ## op_
 #define VLF_PAD_LENGTH(len) ((len) + ((8u - (len & 7u)) & 7u))
 #elif defined(V4F_EXISTS)
-#define VLF_WIDTH (4)
-#define VLF_UP    V4F
-#define VLF_LOW   v4f
+typedef v4f vlf;
+#define VLF_WIDTH      (4)
+#define VLF_HI_OP(op_) V4F ## _ ## op_
+#define VLF_LO_OP(op_) v4f ## _ ## op_
 #define VLF_PAD_LENGTH(len) ((len) + ((4u - (len & 3u)) & 3u))
 #else
-#define VLF_WIDTH (1)
-#define VLF_UP    V1F
-#define VLF_LOW   v1f
+typedef v1f vlf;
+#define VLF_WIDTH      (1)
+#define VLF_HI_OP(op_) V1F ## _ ## op_
+#define VLF_LO_OP(op_) v1f ## _ ## op_
 #define VLF_PAD_LENGTH(len) (len)
 #endif
 
-typedef VLF_LOW vlf;
-#define vlf_st VLF_LOW##_st
-#define vlf_ld VLF_LOW##_ld
-
+#define vlf_st           VLF_LO_OP(st)
+#define vlf_ld           VLF_LO_OP(ld)
+#define vlf_lde0         VLF_LO_OP(lde0)
+#define vlf_broadcast    VLF_LO_OP(broadcast)
+#define vlf_neg          VLF_LO_OP(neg)
+#define vlf_rotl         VLF_LO_OP(rotl)
+#define vlf_mul          VLF_LO_OP(mul)
+#define vlf_add          VLF_LO_OP(add)
+#define vlf_reverse      VLF_LO_OP(reverse)
+#define vlf_sub          VLF_LO_OP(sub)
+#define VLF_DEINTERLEAVE VLF_HI_OP(DEINTERLEAVE)
+#define VLF_INTERLEAVE   VLF_HI_OP(INTERLEAVE)
+#define VLF_LD2DINT      VLF_HI_OP(LD2DINT)
+#define VLF_ST2INT       VLF_HI_OP(ST2INT)
+#define VLF_LD2X2DINT    VLF_HI_OP(LD2X2DINT)
+#define VLF_ST2X2INT     VLF_HI_OP(ST2X2INT)
 
 #endif /* COP_VEC_H */
 

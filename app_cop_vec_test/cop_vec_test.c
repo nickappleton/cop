@@ -271,6 +271,7 @@ static int vectype_ ## _tests(void) \
 
 MAKE_BASIC_TESTS(V1F, v1f, float,  1)
 MAKE_BASIC_TESTS(V1D, v1d, double, 1)
+MAKE_BASIC_TESTS(VLF, vlf, float,  VLF_WIDTH)
 
 #if V4F_EXISTS
 MAKE_BASIC_TESTS(V4F, v4f, float,  4)
@@ -290,6 +291,7 @@ int main(int argc, char *argv[])
 	int failures = 0;
 	failures += v1f_tests();
 	failures += v1d_tests();
+	failures += vlf_tests();
 
 #if V2D_EXISTS
 	failures += v2d_tests();
