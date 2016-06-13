@@ -8,12 +8,20 @@ between OS X, Windows and Linux with minimal fudge-work.
 
 ## cop_alloc
 
-A growing allocator which supports custom alignment and pushing and poping of
-allocation state.
+A virtual memory allocator which supports custom alignment and pushing and
+poping of allocation state.
 
 ## cop_attributes
 
 Useful function and variable attributes which may not exist in C90.
+
+## cop_conversions
+
+Serialisation/deserialisation routines.
+
+## cop_filemap
+
+A memory mapped file-IO module
 
 ## cop_thread
 
