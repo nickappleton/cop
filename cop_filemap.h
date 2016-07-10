@@ -90,7 +90,7 @@ static COP_ATTR_UNUSED int cop_filemap_open(struct cop_filemap *map, const char 
 	int         prot;
 
 	if (flags & COP_FILEMAP_FLAG_W) {
-		oflags = (flags & COP_FILEMAP_FLAG_R) ? O_RDWR                   : O_WRONLY;
+		oflags = (flags & COP_FILEMAP_SHARED) ? O_RDWR                   : O_RDONLY;
 		prot   = (flags & COP_FILEMAP_FLAG_R) ? (PROT_READ | PROT_WRITE) : PROT_WRITE;
 	} else {
 		assert(flags & COP_FILEMAP_FLAG_R);
