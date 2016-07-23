@@ -86,7 +86,7 @@ static COP_ATTR_UNUSED size_t cop_memory_query_system_memory()
 #elif _WIN32
 	MEMORYSTATUSEX memstatus;
 	memstatus.dwLength = sizeof(memstatus);
-	return (GlobalMemoryStatusEx(&memstatus)) ? memstatus.ullTotalPhys : 0;
+	return (GlobalMemoryStatusEx(&memstatus)) ? (size_t)memstatus.ullTotalPhys : 0;
 #else
 #error "do not know how to get system memory"
 #endif
