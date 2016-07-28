@@ -77,12 +77,22 @@ static COP_ATTR_UNUSED void cop_st_ule16(void *buf, uint_fast16_t val)
 	b[1] = (val >> 8) & 0xFFu;
 }
 
+static COP_ATTR_UNUSED void cop_st_sle16(void *buf, int_fast16_t val)
+{
+	cop_st_ule16(buf, ((uint_fast16_t)val) & 0xFFFF);
+}
+
 static COP_ATTR_UNUSED void cop_st_ule24(void *buf, uint_fast32_t val)
 {
 	unsigned char *b = buf;
 	b[0] = val         & 0xFFu;
 	b[1] = (val >> 8)  & 0xFFu;
 	b[2] = (val >> 16) & 0xFFu;
+}
+
+static COP_ATTR_UNUSED void cop_st_sle24(void *buf, int_fast32_t val)
+{
+	cop_st_ule24(buf, ((uint_fast32_t)val) & 0xFFFFFF);
 }
 
 static COP_ATTR_UNUSED void cop_st_ule32(void *buf, uint_fast32_t val)

@@ -27,6 +27,7 @@
 #ifndef COP_THREAD_H
 #define COP_THREAD_H
 
+#include <stdlib.h>
 #include <assert.h>
 #include "cop_attributes.h"
 
@@ -47,7 +48,8 @@ typedef void *(*cop_threadproc)(void *argument);
  * declare the API below. */
 #if defined(_MSC_VER)
 #include "windows.h"
-typedef CRITICAL_SECTION cop_mutex;
+typedef CRITICAL_SECTION   cop_mutex;
+typedef CONDITION_VARIABLE cop_cond;
 struct cop_thread_arg {
 	void           *arg;
 	void           *ret;
@@ -60,6 +62,7 @@ typedef struct {
 #else
 #include <errno.h>
 #include <pthread.h>
+typedef pthread_cond_t  cop_cond;
 typedef pthread_t       cop_thread;
 typedef pthread_mutex_t cop_mutex;
 #endif
@@ -207,6 +210,49 @@ static int cop_translate_err(int err)
 		return COP_THREADERR_OUT_OF_MEMORY;
 	default:
 		return COP_THREADERR_UNKNOWN;
+	}
+}
+
+static COP_ATTR_UNUSED int cop_cond_create(cop_cond *cond)
+{
+	switch (pthread_cond_init(cond, NULL)) {
+		case EBUSY:
+		case EINVAL:
+			/* Return values of EBUSY or EINVAL indicate that the condition
+			 * variable was used in a stupid way. We abort here as a
+			 * courtesy. */
+			abort();
+		case 0:
+			return 0;
+		default:
+			return -1;
+	}
+}
+
+static COP_ATTR_UNUSED void cop_cond_destroy(cop_cond *cond)
+{
+	if (pthread_cond_destroy(cond) != 0) {
+		/* All the possible wait return values indicate that the condition
+		 * variable was used in a stupid way. We abort here as a courtesy. */
+		abort();
+	}
+}
+
+static COP_ATTR_UNUSED void cop_cond_wait(cop_cond *cond, cop_mutex *mutex)
+{
+	if (pthread_cond_wait(cond, mutex) != 0) {
+		/* All the possible wait return values indicate that the condition
+		 * variable was used in a stupid way. We abort here as a courtesy. */
+		abort();
+	}
+}
+
+static COP_ATTR_UNUSED void cop_cond_signal(cop_cond *cond)
+{
+	if (pthread_cond_signal(cond) != 0) {
+		/* All the possible wait return values indicate that the condition
+		 * variable was used in a stupid way. We abort here as a courtesy. */
+		abort();
 	}
 }
 
