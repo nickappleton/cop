@@ -1,1 +1,1 @@
-# nothing here - we have no C files!
+add_subdirectory(libcop)
