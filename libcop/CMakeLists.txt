@@ -18,3 +18,7 @@ else()
 endif()
 
 target_include_directories(cop PRIVATE "../..")
+
+if (UNIX)
+  target_link_libraries(cop pthread)
+endif()
