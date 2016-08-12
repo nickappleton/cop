@@ -11,7 +11,7 @@ endif()
 
 add_library(cop STATIC cop_filemap.c ../cop_alloc.h ../cop_attributes.h ../cop_conversions.h ../cop_filemap.h ../cop_thread.h ../cop_vec.h)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+if (x${CMAKE_CXX_COMPILER_ID} STREQUAL "xMSVC")
   set_property(TARGET cop APPEND_STRING PROPERTY COMPILE_FLAGS " /W3")
 else()
   set_property(TARGET cop APPEND_STRING PROPERTY COMPILE_FLAGS " -Wall")

@@ -125,6 +125,27 @@ static int cop_thread_join(cop_thread thread, void **value);
 
 #if defined(_MSC_VER)
 
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_cond_create(cop_cond *cond)
+{
+	InitializeConditionVariable(cond);
+	return 0;
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_cond_destroy(cop_cond *cond)
+{
+	(void)cond;
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_cond_wait(cop_cond *cond, cop_mutex *mutex)
+{
+	SleepConditionVariableCS(cond, mutex, INFINITE);
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_cond_signal(cop_cond *cond)
+{
+	WakeConditionVariable(cond);
+}
+
 static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_mutex_create(cop_mutex *mutex)
 {
 	InitializeCriticalSection(mutex);
