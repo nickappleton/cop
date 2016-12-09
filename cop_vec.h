@@ -156,35 +156,41 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return -a; }
 #if defined(__clang__)
 typedef float  v4f __attribute__((ext_vector_type(4), aligned(32)));
 typedef double v2d __attribute__((ext_vector_type(2), aligned(32)));
-VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0246(v4f a, v4f b) { return __builtin_shufflevector(a, b, 0, 2, 4, 6); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf1357(v4f a, v4f b) { return __builtin_shufflevector(a, b, 1, 3, 5, 7); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0415(v4f a, v4f b) { return __builtin_shufflevector(a, b, 0, 4, 1, 5); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf2637(v4f a, v4f b) { return __builtin_shufflevector(a, b, 2, 6, 3, 7); }
-VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf02(v2d a, v2d b)   { return __builtin_shufflevector(a, b, 0, 2); }
-VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf13(v2d a, v2d b)   { return __builtin_shufflevector(a, b, 1, 3); }
-
-VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return __builtin_shufflevector(a, b, 1, 2, 3, 4); }
-VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { return __builtin_shufflevector(a, b, 1, 2); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { return __builtin_shufflevector(a, a, 3, 2, 1, 0); }
-VEC_FUNCTION_ATTRIBUTES v2d v2d_reverse(v2d a)     { return __builtin_shufflevector(a, a, 1, 0); }
-
+#define SHUFDEF_V4F2(name_, i0_, i1_, i2_, i3_) VEC_FUNCTION_ATTRIBUTES v4f v4f_ ## name_(v4f a, v4f b) { return __builtin_shufflevector(a, b, i0_, i1_, i2_, i3_); }
+#define SHUFDEF_V4F1(name_, i0_, i1_, i2_, i3_) VEC_FUNCTION_ATTRIBUTES v4f v4f_ ## name_(v4f a)        { return __builtin_shufflevector(a, a, i0_, i1_, i2_, i3_); }
+#define SHUFDEF_V2D2(name_, i0_, i1_)           VEC_FUNCTION_ATTRIBUTES v2d v2d_ ## name_(v2d a, v2d b) { return __builtin_shufflevector(a, b, i0_, i1_); }
+#define SHUFDEF_V2D1(name_, i0_, i1_)           VEC_FUNCTION_ATTRIBUTES v2d v2d_ ## name_(v2d a)        { return __builtin_shufflevector(a, a, i0_, i1_); }
 #else
 #include <stdint.h>
 typedef float  v4f __attribute__((vector_size(16), aligned(32)));
 typedef double v2d __attribute__((vector_size(16), aligned(32)));
-VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0246(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {0, 2, 4, 6}; return __builtin_shuffle(a, b, shufmask); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf1357(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {1, 3, 5, 7}; return __builtin_shuffle(a, b, shufmask); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf0415(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {0, 4, 1, 5}; return __builtin_shuffle(a, b, shufmask); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_shuf2637(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {2, 6, 3, 7}; return __builtin_shuffle(a, b, shufmask); }
-VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf02(v2d a, v2d b)   { static const int64_t __attribute__((vector_size(16))) shufmask = {0, 2}; return __builtin_shuffle(a, b, shufmask); }
-VEC_FUNCTION_ATTRIBUTES v2d v2d_shuf13(v2d a, v2d b)   { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 3}; return __builtin_shuffle(a, b, shufmask); }
-
-VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {1, 2, 3, 4}; return __builtin_shuffle(a, b, shufmask); }
-VEC_FUNCTION_ATTRIBUTES v2d v2d_rotl(v2d a, v2d b) { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 2};       return __builtin_shuffle(a, b, shufmask); }
-VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { static const int32_t __attribute__((vector_size(16))) shufmask = {3, 2, 1, 0}; return __builtin_shuffle(a, a, shufmask); }
-VEC_FUNCTION_ATTRIBUTES v2d v2d_reverse(v2d a)     { static const int64_t __attribute__((vector_size(16))) shufmask = {1, 0};       return __builtin_shuffle(a, a, shufmask); }
-
+#define SHUFDEF_V4F2(name_, i0_, i1_, i2_, i3_) VEC_FUNCTION_ATTRIBUTES v4f v4f_ ## name_(v4f a, v4f b) { static const int32_t __attribute__((vector_size(16))) shufmask = {i0_, i1_, i2_, i3_}; return __builtin_shuffle(a, b, shufmask); }
+#define SHUFDEF_V4F1(name_, i0_, i1_, i2_, i3_) VEC_FUNCTION_ATTRIBUTES v4f v4f_ ## name_(v4f a)        { static const int32_t __attribute__((vector_size(16))) shufmask = {i0_, i1_, i2_, i3_}; return __builtin_shuffle(a, b, shufmask); }
+#define SHUFDEF_V2D2(name_, i0_, i1_, i2_, i3_) VEC_FUNCTION_ATTRIBUTES v2d v2d_ ## name_(v2d a, v2d b) { static const int64_t __attribute__((vector_size(16))) shufmask = {i0_, i1_};           return __builtin_shuffle(a, b, shufmask); }
+#define SHUFDEF_V2D1(name_, i0_, i1_, i2_, i3_) VEC_FUNCTION_ATTRIBUTES v2d v2d_ ## name_(v2d a)        { static const int64_t __attribute__((vector_size(16))) shufmask = {i0_, i1_};           return __builtin_shuffle(a, a, shufmask); }
 #endif
+
+SHUFDEF_V4F2(shuf0246, 0, 2, 4, 6)
+SHUFDEF_V4F2(shuf1357, 1, 3, 5, 7)
+SHUFDEF_V4F2(shuf0415, 0, 4, 1, 5)
+SHUFDEF_V4F2(shuf2637, 2, 6, 3, 7)
+SHUFDEF_V4F2(rotl,     1, 2, 3, 4)
+SHUFDEF_V4F1(reverse,  3, 2, 1, 0)
+SHUFDEF_V2D2(shuf02,   0, 2)
+SHUFDEF_V2D2(shuf13,   1, 3)
+SHUFDEF_V2D2(rotl,     1, 2)
+SHUFDEF_V2D1(reverse,  1, 0)
+
+/* The following are experimental and may be removed*/
+SHUFDEF_V4F1(sel0,     0, 0, 0, 0)
+SHUFDEF_V4F1(sel1,     1, 1, 1, 1)
+SHUFDEF_V4F1(sel2,     2, 2, 2, 2)
+SHUFDEF_V4F1(sel3,     3, 3, 3, 3)
+
+#undef SHUFDEF_V2D2
+#undef SHUFDEF_V4F2
+#undef SHUFDEF_V2D1
+#undef SHUFDEF_V4F1
 
 #define V4F_DEINTERLEAVE(out1_, out2_, in1_, in2_) do { \
 	out1_   = v4f_shuf0246(in1_, in2_); \
