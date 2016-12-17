@@ -18,9 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE. */
 
-#ifndef COP_FILEMAP_H
-#define COP_FILEMAP_H
-
 #include "cop/cop_filemap.h"
 #include <stdint.h>
 
@@ -157,6 +154,3 @@ void cop_filemap_close(struct cop_filemap *map)
 }
 
 #endif
-
-#endif /* COP_FILEMAP_H */
-
