@@ -97,45 +97,22 @@ size_t cop_memory_query_current_lockable()
 #endif
 }
 
-void aalloc_init(struct aalloc *s, size_t reserve_sz, size_t default_align, size_t grow_sz)
-{
-	size_t ps = cop_memory_query_page_size();
-
-	assert(default_align && (((default_align - 1) & default_align) == 0) && "default_align must be positive and a power of two");
-
-	if (ps == 0 || reserve_sz == 0)
-		abort();
-
-	s->reserve_sz    = ps * ((reserve_sz + ps - 1) / ps);
-	s->default_align = default_align;
-	s->grow_sz       = ps * ((grow_sz == 0) ? 1 : ((grow_sz + ps - 1) / ps));
-	s->sp            = 0;
-	s->stack[s->sp]  = 0;
-	s->protect_sz    = 0;
-#if _WIN32
-	s->base          = VirtualAlloc(NULL, s->reserve_sz, MEM_RESERVE, PAGE_NOACCESS);
-	if (s->base == NULL)
-		abort();
-#else
-	s->base          = mmap(NULL, s->reserve_sz, PROT_NONE, MAP_SHARED | MAP_ANON, -1, 0);
-	if (s->base == MAP_FAILED)
-		abort();
-#endif
-}
-
 static size_t aalloc_alignoffset(size_t val, size_t align_mask)
 {
 	return (align_mask + 1 - (val & align_mask)) & align_mask;
 }
 
-void *aalloc_align_alloc(struct aalloc *s, size_t size, size_t align)
+static void *aalloc_align_alloc(struct cop_alloc_iface *iface, size_t size, size_t align)
 {
 	size_t csz;
 	size_t offset;
+	struct cop_alloc_virtual *s = iface->ctx;
+
+	align = (align == 0) ? s->default_align : align;
 
 	assert(align && (((align - 1) & align) == 0) && "align must be positive and a power of two");
 
-	csz    = s->stack[s->sp];
+	csz    = s->used_sz;
 	offset = csz + aalloc_alignoffset((size_t)(s->base + csz), align - 1);
 
 	/* Need to protect more pages. */
@@ -153,16 +130,58 @@ void *aalloc_align_alloc(struct aalloc *s, size_t size, size_t align)
 		s->protect_sz = new_sz;
 	}
 
-	s->stack[s->sp] = offset + size;
+	s->used_sz = offset + size;
 	return s->base + offset;
 }
 
-void *aalloc_alloc(struct aalloc *s, size_t size)
+
+static size_t aalloc_save(struct cop_salloc_iface *a)
 {
-	return aalloc_align_alloc(s, size, s->default_align);
+	struct cop_alloc_virtual *ctx = a->iface.ctx;
+	return ctx->used_sz;
 }
 
-void aalloc_free(struct aalloc *s)
+static void aalloc_restore(struct cop_salloc_iface *a, size_t s)
+{
+	struct cop_alloc_virtual *ctx = a->iface.ctx;
+	assert(s <= ctx->used_sz);
+	/* TODO: change protection flags on the memory - maybe only in debug
+	 * builds. This would be helpful in catching issues. */
+	ctx->used_sz = s;
+}
+
+void cop_alloc_virtual_init(struct cop_alloc_virtual *s, struct cop_salloc_iface *iface, size_t reserve_sz, size_t default_align, size_t grow_sz)
+{
+	size_t ps = cop_memory_query_page_size();
+
+	assert(default_align && (((default_align - 1) & default_align) == 0) && "default_align must be positive and a power of two");
+
+	if (ps == 0 || reserve_sz == 0)
+		abort();
+
+	iface->iface.ctx   = s;
+	iface->iface.alloc = aalloc_align_alloc;
+	iface->save        = aalloc_save;
+	iface->restore     = aalloc_restore;
+
+	s->reserve_sz      = ps * ((reserve_sz + ps - 1) / ps);
+	s->default_align   = default_align;
+	s->grow_sz         = ps * ((grow_sz == 0) ? 1 : ((grow_sz + ps - 1) / ps));
+	s->used_sz         = 0;
+	s->protect_sz      = 0;
+
+#if _WIN32
+	s->base          = VirtualAlloc(NULL, s->reserve_sz, MEM_RESERVE, PAGE_NOACCESS);
+	if (s->base == NULL)
+		abort();
+#else
+	s->base          = mmap(NULL, s->reserve_sz, PROT_NONE, MAP_SHARED | MAP_ANON, -1, 0);
+	if (s->base == MAP_FAILED)
+		abort();
+#endif
+}
+
+void cop_alloc_virtual_free(struct cop_alloc_virtual *s)
 {
 #if _WIN32
 	VirtualFree(s->base, 0, MEM_RELEASE);
@@ -170,27 +189,6 @@ void aalloc_free(struct aalloc *s)
 	munmap(s->base, s->reserve_sz);
 #endif
 }
-
-void aalloc_push(struct aalloc *s)
-{
-	size_t csz = s->stack[s->sp];
-	s->stack[++s->sp] = csz;
-}
-
-void aalloc_merge_pop(struct aalloc *s)
-{
-	size_t csz = s->stack[s->sp];
-	assert(s->sp);
-	s->stack[--s->sp] = csz;
-}
-
-void aalloc_pop(struct aalloc *s)
-{
-	assert(s->sp);
-	/* TODO: unprotect pages. */
-	s->sp--;
-}
-
 
 static void *alloc_grp_temps(struct cop_alloc_iface *a, size_t size, size_t align)
 {
@@ -219,7 +217,67 @@ static void *alloc_grp_temps(struct cop_alloc_iface *a, size_t size, size_t alig
 	return (unsigned char *)(ctx->first + 1) + start;
 }
 
-int cop_alloc_grp_temps_init(struct cop_alloc_grp_temps *gat, struct cop_alloc_iface *iface, size_t initial_sz, size_t max_grow, size_t default_align)
+static size_t cop_alloc_grp_temps_save(struct cop_salloc_iface *a)
+{
+	struct cop_alloc_grp_temps     *gat = a->iface.ctx;
+	struct cop_alloc_grp_temps_buf *buf = gat->first;
+	size_t                          sp  = buf->size;
+	while (buf->next != NULL) {
+		sp  += buf->alloc_sz;
+		buf  = buf->next;
+	}
+	return sp;
+}
+
+static void cop_alloc_grp_temps_restore(struct cop_salloc_iface *a, size_t s)
+{
+	struct cop_alloc_grp_temps     *gat = a->iface.ctx;
+	struct cop_alloc_grp_temps_buf *buf;
+	size_t tot;
+	size_t acc;
+
+	/* Find total size of all allocations. */
+	tot = 0;
+	buf = gat->first;
+	while (buf != NULL) {
+		tot += buf->alloc_sz;
+		buf  = buf->next;
+	}
+
+	assert(s <= tot);
+
+	/* Additional buffers may have been added to the start of the list since
+	 * the size was saved. Find allocation containing the saved position by
+	 * unwinding new allocations. */
+	buf = gat->first;
+	acc = tot - buf->alloc_sz;
+	while (s < acc) {
+		buf = buf->next;
+		acc = acc - buf->alloc_sz;
+		assert(buf != NULL);
+	}
+
+	/* Remove new allocations. */
+	while (gat->first != buf) {
+		struct cop_alloc_grp_temps_buf *tmp = gat->first;
+		gat->first = tmp->next;
+		free(tmp);
+	}
+
+	buf->size  = s - acc;
+	if (buf->size == 0 && tot - acc > buf->alloc_sz) {
+		struct cop_alloc_grp_temps_buf *tmp = realloc(buf, sizeof(*buf) + tot - acc);
+		if (tmp != NULL) {
+			buf = tmp;
+			buf->alloc_sz = tot - acc;
+		}
+	}
+
+	gat->first = buf;
+}
+
+
+int cop_alloc_grp_temps_init(struct cop_alloc_grp_temps *gat, struct cop_salloc_iface *iface, size_t initial_sz, size_t max_grow, size_t default_align)
 {
 	initial_sz           = initial_sz ? initial_sz : cop_memory_query_page_size();
 	initial_sz           = initial_sz ? initial_sz : 1024;
@@ -230,8 +288,10 @@ int cop_alloc_grp_temps_init(struct cop_alloc_grp_temps *gat, struct cop_alloc_i
 	gat->first->size     = 0;
 	gat->max_grow        = max_grow ? max_grow : (initial_sz * 2);
 	gat->default_align   = default_align ? default_align : 16;
-	iface->ctx           = gat;
-	iface->alloc         = alloc_grp_temps;
+	iface->iface.ctx     = gat;
+	iface->iface.alloc   = alloc_grp_temps;
+	iface->save          = cop_alloc_grp_temps_save;
+	iface->restore       = cop_alloc_grp_temps_restore;
 	return 0;
 }
 
