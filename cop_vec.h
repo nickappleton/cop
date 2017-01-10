@@ -209,6 +209,10 @@ SHUFDEF_V4F1(sel3,     3, 3, 3, 3)
 VEC_BASIC_OPERATIONS(v4f, float, VEC_INITSPLAT4, [0])
 VEC_BASIC_OPERATIONS(v2d, double, VEC_INITSPLAT2, [0])
 
+VEC_FUNCTION_ATTRIBUTES v4f   v4f_max(v4f a, v4f b) { return (v4f){a[0] > b[0] ? a[0] : b[0], a[1] > b[1] ? a[1] : b[1], a[2] > b[2] ? a[2] : b[2], a[3] > b[3] ? a[3] : b[3]}; }
+VEC_FUNCTION_ATTRIBUTES v4f   v4f_min(v4f a, v4f b) { return (v4f){a[0] < b[0] ? a[0] : b[0], a[1] < b[1] ? a[1] : b[1], a[2] < b[2] ? a[2] : b[2], a[3] < b[3] ? a[3] : b[3]}; }
+VEC_FUNCTION_ATTRIBUTES float v4f_hmax(v4f a) { v4f f0011 = v4f_shuf0415(a, a); v4f f2233 = v4f_shuf2637(a, a); v4f tmp = v4f_max(f0011, f2233); v4f tmp2 = v4f_shuf2637(tmp, tmp); tmp = v4f_max(tmp, tmp2); return tmp[0]; }
+
 #endif /* (defined(__clang__) || defined(__GNUC__)) && defined(__SSE__) */
 
 #if (defined(__clang__) || defined(__GNUC__)) && defined(__AVX__)
@@ -793,13 +797,13 @@ typedef v8f vlf;
 #define VLF_WIDTH      (8)
 #define VLF_HI_OP(op_) V8F_ ## op_
 #define VLF_LO_OP(op_) v8f_ ## op_
-#define VLF_PAD_LENGTH(len) ((len) + ((8u - (len & 7u)) & 7u))
+#define VLF_PAD_LENGTH(len) ((len) + ((8u - ((len) & 7u)) & 7u))
 #elif defined(V4F_EXISTS)
 typedef v4f vlf;
 #define VLF_WIDTH      (4)
 #define VLF_HI_OP(op_) V4F_ ## op_
 #define VLF_LO_OP(op_) v4f_ ## op_
-#define VLF_PAD_LENGTH(len) ((len) + ((4u - (len & 3u)) & 3u))
+#define VLF_PAD_LENGTH(len) ((len) + ((4u - ((len) & 3u)) & 3u))
 #else
 typedef v1f vlf;
 #define VLF_WIDTH      (1)
@@ -818,6 +822,9 @@ typedef v1f vlf;
 #define vlf_add          VLF_LO_OP(add)
 #define vlf_reverse      VLF_LO_OP(reverse)
 #define vlf_sub          VLF_LO_OP(sub)
+#define vlf_max          VLF_LO_OP(max)
+#define vlf_min          VLF_LO_OP(min)
+#define vlf_hmax         VLF_LO_OP(hmax)
 #define VLF_DEINTERLEAVE VLF_HI_OP(DEINTERLEAVE)
 #define VLF_INTERLEAVE   VLF_HI_OP(INTERLEAVE)
 #define VLF_LD2          VLF_HI_OP(LD2)
