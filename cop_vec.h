@@ -211,7 +211,6 @@ VEC_BASIC_OPERATIONS(v2d, double, VEC_INITSPLAT2, [0])
 
 VEC_FUNCTION_ATTRIBUTES v4f   v4f_max(v4f a, v4f b) { return (v4f){a[0] > b[0] ? a[0] : b[0], a[1] > b[1] ? a[1] : b[1], a[2] > b[2] ? a[2] : b[2], a[3] > b[3] ? a[3] : b[3]}; }
 VEC_FUNCTION_ATTRIBUTES v4f   v4f_min(v4f a, v4f b) { return (v4f){a[0] < b[0] ? a[0] : b[0], a[1] < b[1] ? a[1] : b[1], a[2] < b[2] ? a[2] : b[2], a[3] < b[3] ? a[3] : b[3]}; }
-VEC_FUNCTION_ATTRIBUTES float v4f_hmax(v4f a) { v4f f0011 = v4f_shuf0415(a, a); v4f f2233 = v4f_shuf2637(a, a); v4f tmp = v4f_max(f0011, f2233); v4f tmp2 = v4f_shuf2637(tmp, tmp); tmp = v4f_max(tmp, tmp2); return tmp[0]; }
 
 #endif /* (defined(__clang__) || defined(__GNUC__)) && defined(__SSE__) */
 
@@ -388,7 +387,9 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _mm_lo
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { return _mm_move_s ## mmtyp_(a, _mm_load_s ## mmtyp_(ptr)); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _mm_set1_p ## mmtyp_(a); } \
 VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _mm_store_p ## mmtyp_(ptr, val); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _mm_xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); }
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _mm_xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _min(type_ a, type_ b)    { return _mm_min_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)    { return _mm_max_p ## mmtyp_(a, b); }
 
 #define VEC_AVX_BASIC_OPERATIONS(type_, data_, mmtyp_) \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return _mm256_add_p ## mmtyp_(a, b); } \
@@ -398,7 +399,9 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _mm256
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { return _mm256_blend_p ## mmtyp_(a, _mm256_broadcast_s ## mmtyp_(ptr), 1); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _mm256_broadcast_s ## mmtyp_(&a); } \
 VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _mm256_store_p ## mmtyp_(ptr, val); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { static const data_ nz = -((data_)0.0); return _mm256_xor_p ## mmtyp_(a, _mm256_broadcast_s ## mmtyp_(&nz)); }
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { static const data_ nz = -((data_)0.0); return _mm256_xor_p ## mmtyp_(a, _mm256_broadcast_s ## mmtyp_(&nz)); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _min(type_ a, type_ b)    { return _mm256_min_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)    { return _mm256_max_p ## mmtyp_(a, b); }
 
 /* Look for SSE to provide implementations of v4f and v2d. */
 #if ((defined(_MSC_VER) && defined(_M_X64)) || (defined(__clang__) && defined(__SSE__))) && (!defined(V4F_EXISTS) || !defined(V2D_EXISTS))
@@ -560,6 +563,8 @@ VEC_FUNCTION_ATTRIBUTES void v4f_st(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_neg(v4f a)             { return vnegq_f32(a); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_reverse(v4f a)         { v4f b = vrev64q_f32(a); return vcombine_f32(vget_high_f32(b), vget_low_f32(b)); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a, v4f b)     { return vreinterpretq_f32_u32(vextq_u32(vreinterpretq_u32_f32(a), vreinterpretq_u32_f32(b), 1)); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_min(v4f a, v4f b)      { return vminq_f32(a, b); }
+VEC_FUNCTION_ATTRIBUTES v4f  v4f_max(v4f a, v4f b)      { return vmaxq_f32(a, b); }
 
 #if 0
 /* NEON should be able to do a double load with a single vld1.32 */
@@ -646,6 +651,21 @@ VEC_FUNCTION_ATTRIBUTES v4f  v4f_rotl(v4f a, v4f b)     { return vreinterpretq_f
 	V4F_INTERLEAVE2(t1_, t2_, t3_, t4_, r1_, r3_, r2_, r4_); \
 	V4F_INTERLEAVE2(r1_, r2_, r3_, r4_, t1_, t3_, t2_, t4_); \
 } while (0)
+#endif
+#if defined(V4F_EXISTS) && !defined(V4F_HMAX_DEFINED)
+VEC_FUNCTION_ATTRIBUTES float v4f_hmax(v4f a)
+{
+	float VEC_ALIGN_BEST st[4];
+	v4f x, y;
+	V4F_INTERLEAVE(x, y, a, a);
+	x = v4f_max(x, y);
+	V4F_INTERLEAVE(a, y, x, x);
+	a = v4f_max(a, y);
+	v4f_st(st, a);
+	return st[0];
+}
+#else
+#undef V4F_HMAX_DEFINED
 #endif
 
 #if defined(V2D_EXISTS) && !defined(V2D_INTERLEAVE2)
