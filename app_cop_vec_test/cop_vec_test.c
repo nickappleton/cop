@@ -41,10 +41,14 @@ static int vectype_ ## _tests(void) \
 { \
 	basetype_ VEC_ALIGN_BEST in[(veclen_)*MAX((veclen_), 4)]; \
 	basetype_ VEC_ALIGN_BEST out[(veclen_)*MAX((veclen_), 4)]; \
+	basetype_ VEC_ALIGN_BEST tmp1[(veclen_)*MAX((veclen_), 4)]; \
+	basetype_ VEC_ALIGN_BEST tmp2[(veclen_)*MAX((veclen_), 4)]; \
+	basetype_ ftmp1, ftmp2; \
 	vectype_ a, b, c, d; \
 	unsigned i; \
 	int failures = 0; \
 	basetype_ err; \
+	basetype_ err2; \
 	printf("executing tests for " #vectype_ "vector type\n"); \
 	for (i = 0; i < (veclen_)*MAX((veclen_), 4); i++) { \
 		in[i] = prime_data[i]; \
@@ -163,6 +167,56 @@ static int vectype_ ## _tests(void) \
 		failures++; \
 	} else { \
 		printf("  " #vectype_ "_reverse() test passed\n"); \
+	} \
+	/* Min/max tests */ \
+	for (i = 0; i < (veclen_); i++) { \
+		tmp1[i] = (i & 1) ? -in[i]           : in[i]; \
+		tmp2[i] = (i & 2) ? -in[(veclen_)+i] : in[(veclen_)+i]; \
+	} \
+	a = vectype_ ## _ld(tmp1); \
+	b = vectype_ ## _ld(tmp2); \
+	c = vectype_ ## _min(a, b); \
+	d = vectype_ ## _max(a, b); \
+	vectype_ ## _st(out + (veclen_)*0, c); \
+	vectype_ ## _st(out + (veclen_)*1, d); \
+	for (i = 0, err = 0.0f, err2 = 0.0f, ftmp1 = tmp1[0], ftmp2 = tmp2[0]; i < (veclen_); i++) { \
+		basetype_ fminv = (tmp1[i] < tmp2[i]) ? tmp1[i] : tmp2[i]; \
+		basetype_ fmaxv = (tmp1[i] > tmp2[i]) ? tmp1[i] : tmp2[i]; \
+		basetype_ e; \
+		ftmp1 = (tmp1[i] < ftmp1) ? tmp1[i] : ftmp1; \
+		ftmp2 = (tmp2[i] > ftmp2) ? tmp2[i] : ftmp2; \
+		e = out[i+(veclen_)*0] - fminv; \
+		err += e*e; \
+		e = out[i+(veclen_)*1] - fmaxv; \
+		err2 += e*e; \
+	} \
+	ftmp1 = (ftmp1 - vectype_ ## _hmin(a)); \
+	ftmp2 = (ftmp2 - vectype_ ## _hmax(b)); \
+	ftmp1 *= ftmp1; \
+	ftmp2 *= ftmp2; \
+	if (err > 1e-10) { \
+		printf("  " #vectypecaps_ "_min() test failed\n"); \
+		failures++; \
+	} else { \
+		printf("  " #vectypecaps_ "_min() test passed\n"); \
+	} \
+	if (err2 > 1e-10) { \
+		printf("  " #vectypecaps_ "_max() test failed\n"); \
+		failures++; \
+	} else { \
+		printf("  " #vectypecaps_ "_max() test passed\n"); \
+	} \
+	if (ftmp1 > 1e-10) { \
+		printf("  " #vectypecaps_ "_hmin() test failed\n"); \
+		failures++; \
+	} else { \
+		printf("  " #vectypecaps_ "_hmin() test passed\n"); \
+	} \
+	if (ftmp2 > 1e-10) { \
+		printf("  " #vectypecaps_ "_hmax() test failed\n"); \
+		failures++; \
+	} else { \
+		printf("  " #vectypecaps_ "_hmax() test passed\n"); \
 	} \
 	/* Interleave test */ \
 	a = vectype_ ## _ld(in); \

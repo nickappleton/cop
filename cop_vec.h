@@ -62,7 +62,7 @@
  * will exist. If the compiler does not support a built-in vector type, this
  * macro has no effect. */
 #ifndef VEC_DISABLE_COMPILER_BUILTINS
-#define VEC_DISABLE_COMPILER_BUILTINS (0)
+#define VEC_DISABLE_COMPILER_BUILTINS (1)
 #endif
 
 /* The library implementation is divided up into two parts. Parts one and two
@@ -211,6 +211,8 @@ VEC_BASIC_OPERATIONS(v2d, double, VEC_INITSPLAT2, [0])
 
 VEC_FUNCTION_ATTRIBUTES v4f   v4f_max(v4f a, v4f b) { return (v4f){a[0] > b[0] ? a[0] : b[0], a[1] > b[1] ? a[1] : b[1], a[2] > b[2] ? a[2] : b[2], a[3] > b[3] ? a[3] : b[3]}; }
 VEC_FUNCTION_ATTRIBUTES v4f   v4f_min(v4f a, v4f b) { return (v4f){a[0] < b[0] ? a[0] : b[0], a[1] < b[1] ? a[1] : b[1], a[2] < b[2] ? a[2] : b[2], a[3] < b[3] ? a[3] : b[3]}; }
+VEC_FUNCTION_ATTRIBUTES v2d   v2d_max(v2d a, v2d b) { return (v2d){a[0] > b[0] ? a[0] : b[0], a[1] > b[1] ? a[1] : b[1]}; }
+VEC_FUNCTION_ATTRIBUTES v2d   v2d_min(v2d a, v2d b) { return (v2d){a[0] < b[0] ? a[0] : b[0], a[1] < b[1] ? a[1] : b[1]}; }
 
 #endif /* (defined(__clang__) || defined(__GNUC__)) && defined(__SSE__) */
 
@@ -368,6 +370,11 @@ VEC_FUNCTION_ATTRIBUTES v8f v8f_reverse(v8f a)             { static const int32_
 
 VEC_BASIC_OPERATIONS(v8f, float, VEC_INITSPLAT8, [0])
 VEC_BASIC_OPERATIONS(v4d, double, VEC_INITSPLAT4, [0])
+
+VEC_FUNCTION_ATTRIBUTES v4d   v4d_max(v4d a, v4d b) { return (v4d){a[0] > b[0] ? a[0] : b[0], a[1] > b[1] ? a[1] : b[1], a[2] > b[2] ? a[2] : b[2], a[3] > b[3] ? a[3] : b[3]}; }
+VEC_FUNCTION_ATTRIBUTES v4d   v4d_min(v4d a, v4d b) { return (v4d){a[0] < b[0] ? a[0] : b[0], a[1] < b[1] ? a[1] : b[1], a[2] < b[2] ? a[2] : b[2], a[3] < b[3] ? a[3] : b[3]}; }
+VEC_FUNCTION_ATTRIBUTES v8f   v8f_max(v8f a, v8f b) { return (v8f){a[0] > b[0] ? a[0] : b[0], a[1] > b[1] ? a[1] : b[1], a[2] > b[2] ? a[2] : b[2], a[3] > b[3] ? a[3] : b[3], a[4] > b[4] ? a[4] : b[4], a[5] > b[5] ? a[5] : b[5], a[6] > b[6] ? a[6] : b[6], a[7] > b[7] ? a[7] : b[7]}; }
+VEC_FUNCTION_ATTRIBUTES v8f   v8f_min(v8f a, v8f b) { return (v8f){a[0] < b[0] ? a[0] : b[0], a[1] < b[1] ? a[1] : b[1], a[2] < b[2] ? a[2] : b[2], a[3] < b[3] ? a[3] : b[3], a[4] < b[4] ? a[4] : b[4], a[5] < b[5] ? a[5] : b[5], a[6] < b[6] ? a[6] : b[6], a[7] < b[7] ? a[7] : b[7]}; }
 
 #endif /* defined(__clang__) && defined(__AVX__) */
 #endif /* !VEC_DISABLE_COMPILER_BUILTINS */
@@ -667,6 +674,21 @@ VEC_FUNCTION_ATTRIBUTES float v4f_hmax(v4f a)
 #else
 #undef V4F_HMAX_DEFINED
 #endif
+#if defined(V4F_EXISTS) && !defined(V4F_HMIN_DEFINED)
+VEC_FUNCTION_ATTRIBUTES float v4f_hmin(v4f a)
+{
+	float VEC_ALIGN_BEST st[4];
+	v4f x, y;
+	V4F_INTERLEAVE(x, y, a, a);
+	x = v4f_min(x, y);
+	V4F_INTERLEAVE(a, y, x, x);
+	a = v4f_min(a, y);
+	v4f_st(st, a);
+	return st[0];
+}
+#else
+#undef V4F_HMIN_DEFINED
+#endif
 
 #if defined(V2D_EXISTS) && !defined(V2D_INTERLEAVE2)
 #define V2D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V2D_INTERLEAVE(out1_, out2_, in1_, in2_); V2D_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
@@ -699,6 +721,32 @@ VEC_FUNCTION_ATTRIBUTES float v4f_hmax(v4f a)
 	r1_ = t1_; \
 	r2_ = t2_; \
 } while (0)
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_HMAX_DEFINED)
+VEC_FUNCTION_ATTRIBUTES double v2d_hmax(v2d a)
+{
+	double VEC_ALIGN_BEST st[2];
+	v2d x, y;
+	V2D_INTERLEAVE(x, y, a, a);
+	a = v2d_max(x, y);
+	v2d_st(st, a);
+	return st[0];
+}
+#else
+#undef V2D_HMAX_DEFINED
+#endif
+#if defined(V2D_EXISTS) && !defined(V2D_HMIN_DEFINED)
+VEC_FUNCTION_ATTRIBUTES double v2d_hmin(v2d a)
+{
+	double VEC_ALIGN_BEST st[2];
+	v2d x, y;
+	V2D_INTERLEAVE(x, y, a, a);
+	a = v2d_min(x, y);
+	v2d_st(st, a);
+	return st[0];
+}
+#else
+#undef V2D_HMIN_DEFINED
 #endif
 
 #if defined(V8F_EXISTS) && !defined(V8F_INTERLEAVE2)
@@ -737,6 +785,41 @@ VEC_FUNCTION_ATTRIBUTES float v4f_hmax(v4f a)
 	V8F_INTERLEAVE2(r5_, r6_, r7_, r8_, z3_, z7_, z4_, z8_); \
 } while (0)
 #endif
+#if defined(V8F_EXISTS) && !defined(V8F_HMAX_DEFINED)
+VEC_FUNCTION_ATTRIBUTES float v8f_hmax(v8f a)
+{
+	float VEC_ALIGN_BEST st[8];
+	v8f x, y;
+	V8F_INTERLEAVE(x, y, a, a);
+	a = v8f_max(x, y);
+	V8F_INTERLEAVE(x, y, a, a);
+	a = v8f_max(x, y);
+	V8F_INTERLEAVE(x, y, a, a);
+	a = v8f_max(x, y);
+	v8f_st(st, a);
+	return st[0];
+}
+#else
+#undef V8F_HMAX_DEFINED
+#endif
+#if defined(V8F_EXISTS) && !defined(V8F_HMIN_DEFINED)
+VEC_FUNCTION_ATTRIBUTES float v8f_hmin(v8f a)
+{
+	float VEC_ALIGN_BEST st[8];
+	v8f x, y;
+	V8F_INTERLEAVE(x, y, a, a);
+	a = v8f_min(x, y);
+	V8F_INTERLEAVE(x, y, a, a);
+	a = v8f_min(x, y);
+	V8F_INTERLEAVE(x, y, a, a);
+	a = v8f_min(x, y);
+	v8f_st(st, a);
+	return st[0];
+}
+#else
+#undef V8F_HMIN_DEFINED
+#endif
+
 
 #if defined(V4D_EXISTS) && !defined(V4D_INTERLEAVE2)
 #define V4D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V4D_INTERLEAVE(out1_, out2_, in1_, in2_); V4D_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
@@ -769,6 +852,36 @@ VEC_FUNCTION_ATTRIBUTES float v4f_hmax(v4f a)
 	V4D_INTERLEAVE2(r1_, r2_, r3_, r4_, t1_, t3_, t2_, t4_); \
 } while (0)
 #endif
+#if defined(V4D_EXISTS) && !defined(V4D_HMAX_DEFINED)
+VEC_FUNCTION_ATTRIBUTES double v4d_hmax(v4d a)
+{
+	double VEC_ALIGN_BEST st[4];
+	v4d x, y;
+	V4D_INTERLEAVE(x, y, a, a);
+	x = v4d_max(x, y);
+	V4D_INTERLEAVE(a, y, x, x);
+	a = v4d_max(a, y);
+	v4d_st(st, a);
+	return st[0];
+}
+#else
+#undef V4D_HMAX_DEFINED
+#endif
+#if defined(V4D_EXISTS) && !defined(V4D_HMIN_DEFINED)
+VEC_FUNCTION_ATTRIBUTES double v4d_hmin(v4d a)
+{
+	double VEC_ALIGN_BEST st[4];
+	v4d x, y;
+	V4D_INTERLEAVE(x, y, a, a);
+	x = v4d_min(x, y);
+	V4D_INTERLEAVE(a, y, x, x);
+	a = v4d_min(a, y);
+	v4d_st(st, a);
+	return st[0];
+}
+#else
+#undef V4D_HMIN_DEFINED
+#endif
 
 /* Build the "scalar" v1d and v1f vectors. These really only exist to make
  * pre-processor code generation work nicely. Bury your feelings somewhere
@@ -776,8 +889,12 @@ VEC_FUNCTION_ATTRIBUTES float v4f_hmax(v4f a)
 typedef float  v1f;
 #define VEC_NOTHING
 VEC_BASIC_OPERATIONS(v1f, float,  VEC_INITSPLAT1, VEC_NOTHING)
+VEC_FUNCTION_ATTRIBUTES v1f v1f_min(v1f a, v1f b)            { return a < b ? a : b; }
+VEC_FUNCTION_ATTRIBUTES v1f v1f_max(v1f a, v1f b)            { return a > b ? a : b; }
 VEC_FUNCTION_ATTRIBUTES v1f v1f_rotl(v1f a, v1f b)           { (void)a; return b; }
 VEC_FUNCTION_ATTRIBUTES v1f v1f_reverse(v1f a)               { return a; }
+VEC_FUNCTION_ATTRIBUTES v1f v1f_hmin(v1f a)                  { return a; }
+VEC_FUNCTION_ATTRIBUTES v1f v1f_hmax(v1f a)                  { return a; }
 #define V1F_INTERLEAVE(out1_, out2_, in1_, in2_)             do { out1_ = in1_; out2_ = in2_; } while (0)
 #define V1F_DEINTERLEAVE(out1_, out2_, in1_, in2_)           do { out1_ = in1_; out2_ = in2_; } while (0)
 #define V1F_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V1F_INTERLEAVE(out1_, out2_, in1_, in2_); V1F_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
@@ -791,8 +908,12 @@ VEC_FUNCTION_ATTRIBUTES v1f v1f_reverse(v1f a)               { return a; }
 
 typedef double v1d;
 VEC_BASIC_OPERATIONS(v1d, double, VEC_INITSPLAT1, VEC_NOTHING)
+VEC_FUNCTION_ATTRIBUTES v1d v1d_min(v1d a, v1d b)            { return a < b ? a : b; }
+VEC_FUNCTION_ATTRIBUTES v1d v1d_max(v1d a, v1d b)            { return a > b ? a : b; }
 VEC_FUNCTION_ATTRIBUTES v1d v1d_rotl(v1d a, v1d b)           { (void)a; return b; }
 VEC_FUNCTION_ATTRIBUTES v1d v1d_reverse(v1d a)               { return a; }
+VEC_FUNCTION_ATTRIBUTES v1d v1d_hmin(v1d a)                  { return a; }
+VEC_FUNCTION_ATTRIBUTES v1d v1d_hmax(v1d a)                  { return a; }
 #define V1D_INTERLEAVE(out1_, out2_, in1_, in2_)             do { out1_ = in1_; out2_ = in2_; } while (0)
 #define V1D_DEINTERLEAVE(out1_, out2_, in1_, in2_)           do { out1_ = in1_; out2_ = in2_; } while (0)
 #define V1D_INTERLEAVE2(out1_, out2_, out3_, out4_, in1_, in2_, in3_, in4_)   do { V1D_INTERLEAVE(out1_, out2_, in1_, in2_); V1D_INTERLEAVE(out3_, out4_, in3_, in4_); } while (0)
@@ -845,6 +966,7 @@ typedef v1f vlf;
 #define vlf_max          VLF_LO_OP(max)
 #define vlf_min          VLF_LO_OP(min)
 #define vlf_hmax         VLF_LO_OP(hmax)
+#define vlf_hmin         VLF_LO_OP(hmin)
 #define VLF_DEINTERLEAVE VLF_HI_OP(DEINTERLEAVE)
 #define VLF_INTERLEAVE   VLF_HI_OP(INTERLEAVE)
 #define VLF_LD2          VLF_HI_OP(LD2)
