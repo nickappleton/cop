@@ -326,6 +326,7 @@ static int vectype_ ## _tests(void) \
 MAKE_BASIC_TESTS(V1F, v1f, float,  1)
 MAKE_BASIC_TESTS(V1D, v1d, double, 1)
 MAKE_BASIC_TESTS(VLF, vlf, float,  VLF_WIDTH)
+MAKE_BASIC_TESTS(VLD, vld, double, VLD_WIDTH)
 
 #if V4F_EXISTS
 MAKE_BASIC_TESTS(V4F, v4f, float,  4)
@@ -345,7 +346,6 @@ int main(int argc, char *argv[])
 	int failures = 0;
 	failures += v1f_tests();
 	failures += v1d_tests();
-	failures += vlf_tests();
 
 #if V2D_EXISTS
 	failures += v2d_tests();
@@ -367,6 +367,9 @@ int main(int argc, char *argv[])
 #else
 	printf("no v4d type - skipping tests\n");
 #endif
+
+	failures += vlf_tests();
+	failures += vld_tests();
 
 	if (failures) {
 		printf("%d test failures\n", failures);

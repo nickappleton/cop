@@ -472,8 +472,21 @@ do { \
 
 typedef __m256 v8f;
 VEC_AVX_BASIC_OPERATIONS(v8f, float, s)
-VEC_FUNCTION_ATTRIBUTES v8f v8f_reverse(v8f a)     { return a; }
-VEC_FUNCTION_ATTRIBUTES v8f v8f_rotl(v8f a, v8f b) { return a; }
+
+VEC_FUNCTION_ATTRIBUTES v8f v8f_reverse(v8f a)
+{
+	a = _mm256_permute2f128_ps(a, a, 0x01);            /* a4 a5 a6 a7 a0 a1 a2 a3 */
+	a = _mm256_permute_ps(a, _MM_SHUFFLE(0, 1, 2, 3)); /* a7 a6 a5 a4 a3 a2 a1 a0 */
+	return a;
+}
+VEC_FUNCTION_ATTRIBUTES v8f v8f_rotl(v8f a, v8f b)
+{
+	b = _mm256_blend_ps(a, b, 0x01);                      /* b = b0 a1 a2 a3 a4 a5 a6 a7 */
+	b = _mm256_permute2f128_ps(b, b, 0x01);               /* b = a4 a5 a6 a7 b0 a1 a2 a3 */
+	b = _mm256_blend_ps(a, b, 0x11);                      /* b = a4 a1 a2 a3 b0 a5 a6 a7 */
+	b = _mm256_shuffle_ps(b, b, _MM_SHUFFLE(0, 3, 2, 1)); /* b = a1 a2 a3 a4 a5 a6 a7 b0 */
+	return b;
+}
 
 #define V8F_DEINTERLEAVE(out1_, out2_, in1_, in2_) do { \
 	v8f Z1_, Z2_; \
@@ -527,8 +540,20 @@ VEC_FUNCTION_ATTRIBUTES v8f v8f_rotl(v8f a, v8f b) { return a; }
 
 typedef __m256d v4d;
 VEC_AVX_BASIC_OPERATIONS(v4d, double, d)
-VEC_FUNCTION_ATTRIBUTES v4d v4d_reverse(v4d a)     { return a; }
-VEC_FUNCTION_ATTRIBUTES v4d v4d_rotl(v4d a, v4d b) { return a; }
+
+VEC_FUNCTION_ATTRIBUTES v4d v4d_reverse(v4d a)
+{
+	a = _mm256_permute2f128_pd(a, a, 0x01); /* a2 a3 a0 a1 */
+	a = _mm256_permute_pd(a, 0x05);         /* a3 a2 a1 a0 */
+	return a;
+}
+VEC_FUNCTION_ATTRIBUTES v4d v4d_rotl(v4d a, v4d b)
+{
+	b = _mm256_blend_pd(a, b, 0x01);         /* b = b0 a1 a2 a3 */
+	b = _mm256_permute2f128_pd(b, b, 0x01);  /* b = a2 a3 b0 a1 */
+	a = _mm256_shuffle_pd(a, b, 0x05);       /* a = a1 a2 a3 b0 */
+	return a;
+}
 
 #define V4D_DEINTERLEAVE(out1_, out2_, in1_, in2_) do { \
 	v4d Z1_, Z2_; \
@@ -975,6 +1000,49 @@ typedef v1f vlf;
 #define VLF_ST2INT       VLF_HI_OP(ST2INT)
 #define VLF_LD2X2DINT    VLF_HI_OP(LD2X2DINT)
 #define VLF_ST2X2INT     VLF_HI_OP(ST2X2INT)
+
+#if defined(V4D_EXISTS)
+typedef v4d vld;
+#define VLD_WIDTH      (4)
+#define VLD_HI_OP(op_) V4D_ ## op_
+#define VLD_LO_OP(op_) v4d_ ## op_
+#define VLD_PAD_LENGTH(len) ((len) + ((4u - ((len) & 3u)) & 3u))
+#elif defined(V2D_EXISTS)
+typedef v2d vld;
+#define VLD_WIDTH      (2)
+#define VLD_HI_OP(op_) V2D_ ## op_
+#define VLD_LO_OP(op_) v2d_ ## op_
+#define VLD_PAD_LENGTH(len) ((len) + ((2u - ((len) & 1u)) & 1u))
+#else
+typedef v1d vld;
+#define VLD_WIDTH      (1)
+#define VLD_HI_OP(op_) V1D_ ## op_
+#define VLD_LO_OP(op_) v1d_ ## op_
+#define VLD_PAD_LENGTH(len) (len)
+#endif
+
+#define vld_st           VLD_LO_OP(st)
+#define vld_ld           VLD_LO_OP(ld)
+#define vld_lde0         VLD_LO_OP(lde0)
+#define vld_broadcast    VLD_LO_OP(broadcast)
+#define vld_neg          VLD_LO_OP(neg)
+#define vld_rotl         VLD_LO_OP(rotl)
+#define vld_mul          VLD_LO_OP(mul)
+#define vld_add          VLD_LO_OP(add)
+#define vld_reverse      VLD_LO_OP(reverse)
+#define vld_sub          VLD_LO_OP(sub)
+#define vld_max          VLD_LO_OP(max)
+#define vld_min          VLD_LO_OP(min)
+#define vld_hmax         VLD_LO_OP(hmax)
+#define vld_hmin         VLD_LO_OP(hmin)
+#define VLD_DEINTERLEAVE VLD_HI_OP(DEINTERLEAVE)
+#define VLD_INTERLEAVE   VLD_HI_OP(INTERLEAVE)
+#define VLD_LD2          VLD_HI_OP(LD2)
+#define VLD_ST2          VLD_HI_OP(ST2)
+#define VLD_LD2DINT      VLD_HI_OP(LD2DINT)
+#define VLD_ST2INT       VLD_HI_OP(ST2INT)
+#define VLD_LD2X2DINT    VLD_HI_OP(LD2X2DINT)
+#define VLD_ST2X2INT     VLD_HI_OP(ST2X2INT)
 
 #endif /* COP_VEC_H */
 
