@@ -417,8 +417,6 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)    { return _mm256
 #include "intrin.h"
 #else
 #include "xmmintrin.h"
-#include "emmintrin.h"
-#include "tmmintrin.h"
 #endif
 
 #ifndef V4F_EXISTS
@@ -427,7 +425,12 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)    { return _mm256
 typedef __m128 v4f;
 VEC_SSE_BASIC_OPERATIONS(v4f, float, s)
 VEC_FUNCTION_ATTRIBUTES v4f v4f_reverse(v4f a)     { return _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 1, 2, 3)); }
+#if 0
+#include "tmmintrin.h"
 VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { return _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(b), _mm_castps_si128(a), 4)); }
+#else
+VEC_FUNCTION_ATTRIBUTES v4f v4f_rotl(v4f a, v4f b) { a = _mm_move_ss(a, b); return _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 3, 2, 1)); }
+#endif
 
 #define V4F_INTERLEAVE(out1_, out2_, in1_, in2_) \
 do { \
