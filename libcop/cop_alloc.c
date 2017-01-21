@@ -289,6 +289,7 @@ int cop_alloc_grp_temps_init(struct cop_alloc_grp_temps *gat, struct cop_salloc_
 		return -1;
 	gat->first->alloc_sz = initial_sz;
 	gat->first->size     = 0;
+	gat->first->next     = NULL;
 	gat->max_grow        = max_grow ? max_grow : (initial_sz * 2);
 	gat->default_align   = default_align ? default_align : 16;
 	iface->iface.ctx     = gat;
