@@ -113,7 +113,7 @@ void cop_alloc_grp_temps_free(struct cop_alloc_grp_temps *gat);
 
 struct cop_alloc_virtual;
 
-void cop_alloc_virtual_init(struct cop_alloc_virtual *s, struct cop_salloc_iface *iface, size_t reserve_sz, size_t default_align, size_t grow_sz);
+int cop_alloc_virtual_init(struct cop_alloc_virtual *s, struct cop_salloc_iface *iface, size_t reserve_sz, size_t default_align, size_t grow_sz);
 void cop_alloc_virtual_free(struct cop_alloc_virtual *s);
 
 /* ---------------------------------------------------------------------------

@@ -146,6 +146,11 @@ static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_cond_signal(cop_cond *cond
 	WakeConditionVariable(cond);
 }
 
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_cond_broadcast(cop_cond *cond)
+{
+	WakeAllConditionVariable(cond);
+}
+
 static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_mutex_create(cop_mutex *mutex)
 {
 	InitializeCriticalSection(mutex);
@@ -271,6 +276,15 @@ static COP_ATTR_UNUSED void cop_cond_wait(cop_cond *cond, cop_mutex *mutex)
 static COP_ATTR_UNUSED void cop_cond_signal(cop_cond *cond)
 {
 	if (pthread_cond_signal(cond) != 0) {
+		/* All the possible wait return values indicate that the condition
+		 * variable was used in a stupid way. We abort here as a courtesy. */
+		abort();
+	}
+}
+
+static COP_ATTR_UNUSED void cop_cond_broadcast(cop_cond *cond)
+{
+	if (pthread_cond_broadcast(cond) != 0) {
 		/* All the possible wait return values indicate that the condition
 		 * variable was used in a stupid way. We abort here as a courtesy. */
 		abort();

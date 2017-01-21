@@ -150,14 +150,15 @@ static void aalloc_restore(struct cop_salloc_iface *a, size_t s)
 	ctx->used_sz = s;
 }
 
-void cop_alloc_virtual_init(struct cop_alloc_virtual *s, struct cop_salloc_iface *iface, size_t reserve_sz, size_t default_align, size_t grow_sz)
+int cop_alloc_virtual_init(struct cop_alloc_virtual *s, struct cop_salloc_iface *iface, size_t reserve_sz, size_t default_align, size_t grow_sz)
 {
-	size_t ps = cop_memory_query_page_size();
+	size_t ps;
 
 	assert(default_align && (((default_align - 1) & default_align) == 0) && "default_align must be positive and a power of two");
+	assert(reserve_sz != 0);
 
-	if (ps == 0 || reserve_sz == 0)
-		abort();
+	if ((ps = cop_memory_query_page_size()) == 0)
+		return -1;
 
 	iface->iface.ctx   = s;
 	iface->iface.alloc = aalloc_align_alloc;
@@ -173,12 +174,14 @@ void cop_alloc_virtual_init(struct cop_alloc_virtual *s, struct cop_salloc_iface
 #if _WIN32
 	s->base          = VirtualAlloc(NULL, s->reserve_sz, MEM_RESERVE, PAGE_NOACCESS);
 	if (s->base == NULL)
-		abort();
+		return -1;
 #else
 	s->base          = mmap(NULL, s->reserve_sz, PROT_NONE, MAP_SHARED | MAP_ANON, -1, 0);
 	if (s->base == MAP_FAILED)
-		abort();
+		return -1;
 #endif
+
+	return 0;
 }
 
 void cop_alloc_virtual_free(struct cop_alloc_virtual *s)
