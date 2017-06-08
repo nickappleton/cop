@@ -177,7 +177,7 @@ void fn_name_(data_type_ *data, size_t nb_data) \
 		size_t     p  = (i >> 1) - 1; \
 		data_type_ jv = data[j]; \
 		data_type_ pv = data[p]; \
-		while (!comparator_macro_(jv, pv)) { \
+		while (!(comparator_macro_(jv, pv))) { \
 			data[j] = pv; \
 			data[p] = jv; \
 			j       = p; \
@@ -195,7 +195,7 @@ void fn_name_(data_type_ *data, size_t nb_data) \
 		for (p = 0, c = 1; c < hs; p = c, c = ((c + 1) << 1) - 1) { \
 			data_type_    cv2, cv = data[c]; \
 			size_t cn             = c + 1; \
-			if (cn < hs && (cv2 = data[cn], !comparator_macro_(cv2, cv))) { \
+			if (cn < hs && (cv2 = data[cn], !(comparator_macro_(cv2, cv)))) { \
 				c  = cn; \
 				cv = cv2; \
 			} \
