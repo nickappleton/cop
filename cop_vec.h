@@ -411,7 +411,7 @@ VEC_FUNCTION_ATTRIBUTES type_ type_ ## _min(type_ a, type_ b)    { return _mm256
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)    { return _mm256_max_p ## mmtyp_(a, b); }
 
 /* Look for SSE to provide implementations of v4f and v2d. */
-#if ((defined(_MSC_VER) && defined(_M_X64)) || (defined(__clang__) && defined(__SSE__))) && (!defined(V4F_EXISTS) || !defined(V2D_EXISTS))
+#if ((defined(_MSC_VER) && defined(_M_X64)) || ((defined(__clang__) || defined(__GNUC__)) && defined(__SSE__))) && (!defined(V4F_EXISTS) || !defined(V2D_EXISTS))
 
 #if defined(_MSC_VER)
 #include "intrin.h"
