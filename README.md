@@ -23,6 +23,10 @@ Serialisation/deserialisation routines.
 
 A memory mapped file-IO module
 
+## cop_log
+
+A logging interface and set of helper macros.
+
 ## cop_thread
 
 A no-extras two-function threading library with access to a mutex object.
