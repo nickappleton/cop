@@ -133,14 +133,15 @@
  * will generate those operations. This macro is always used for the v1d and
  * v1f types which only really exist as a convenience. */
 #define VEC_BASIC_OPERATIONS(type_, data_, initsplat_, acc0_) \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return a + b; } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return a - b; } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return a * b; } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return *((type_ *)ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)          { return a + b; } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)          { return a - b; } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)          { return a * b; } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)            { return *((type_ *)ptr); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { a acc0_ = *((data_ *)ptr); return a; } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return (type_)initsplat_(a); } \
-VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { *((type_ *)ptr) = val; } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return -a; }
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)             { return (type_)initsplat_(a); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val)       { *((type_ *)ptr) = val; } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _ste0(void *ptr, type_ val)     { *((data_ *)ptr) = val acc0_; } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)                   { return -a; }
 
 #define VEC_INITSPLAT1(a) (a)
 #define VEC_INITSPLAT2(a) {(a), (a)}
@@ -387,28 +388,30 @@ VEC_FUNCTION_ATTRIBUTES v8f   v8f_min(v8f a, v8f b) { return (v8f){a[0] < b[0] ?
  * found, don't worry, this macro will not be used - it's just easier to
  * define it here. */
 #define VEC_SSE_BASIC_OPERATIONS(type_, data_, mmtyp_) \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return _mm_add_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return _mm_sub_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return _mm_mul_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _mm_load_p ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)          { return _mm_add_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)          { return _mm_sub_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)          { return _mm_mul_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)            { return _mm_load_p ## mmtyp_(ptr); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { return _mm_move_s ## mmtyp_(a, _mm_load_s ## mmtyp_(ptr)); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _mm_set1_p ## mmtyp_(a); } \
-VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _mm_store_p ## mmtyp_(ptr, val); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { return _mm_xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _min(type_ a, type_ b)    { return _mm_min_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)    { return _mm_max_p ## mmtyp_(a, b); }
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)             { return _mm_set1_p ## mmtyp_(a); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val)       { _mm_store_p ## mmtyp_(ptr, val); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _ste0(void *ptr, type_ val)     { _mm_store_s ## mmtyp_(ptr, val); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)                   { return _mm_xor_p ## mmtyp_(a, _mm_set1_p ## mmtyp_((data_)(-0.0))); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _min(type_ a, type_ b)          { return _mm_min_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)          { return _mm_max_p ## mmtyp_(a, b); }
 
 #define VEC_AVX_BASIC_OPERATIONS(type_, data_, mmtyp_) \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)    { return _mm256_add_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)    { return _mm256_sub_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)    { return _mm256_mul_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)      { return _mm256_load_p ## mmtyp_(ptr); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _add(type_ a, type_ b)          { return _mm256_add_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _sub(type_ a, type_ b)          { return _mm256_sub_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _mul(type_ a, type_ b)          { return _mm256_mul_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _ld(const void *ptr)            { return _mm256_load_p ## mmtyp_(ptr); } \
 VEC_FUNCTION_ATTRIBUTES type_ type_ ## _lde0(type_ a, const void *ptr) { return _mm256_blend_p ## mmtyp_(a, _mm256_broadcast_s ## mmtyp_(ptr), 1); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)       { return _mm256_broadcast_s ## mmtyp_(&a); } \
-VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val) { _mm256_store_p ## mmtyp_(ptr, val); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)             { static const data_ nz = -((data_)0.0); return _mm256_xor_p ## mmtyp_(a, _mm256_broadcast_s ## mmtyp_(&nz)); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _min(type_ a, type_ b)    { return _mm256_min_p ## mmtyp_(a, b); } \
-VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)    { return _mm256_max_p ## mmtyp_(a, b); }
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _broadcast(data_ a)             { return _mm256_broadcast_s ## mmtyp_(&a); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _st(void *ptr, type_ val)       { _mm256_store_p ## mmtyp_(ptr, val); } \
+VEC_FUNCTION_ATTRIBUTES void  type_ ## _ste0(void *ptr, type_ val)     { _mm_store_s ## mmtyp_(ptr, _mm256_extractf128_p ## mmtyp_(val, 0)); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _neg(type_ a)                   { static const data_ nz = -((data_)0.0); return _mm256_xor_p ## mmtyp_(a, _mm256_broadcast_s ## mmtyp_(&nz)); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _min(type_ a, type_ b)          { return _mm256_min_p ## mmtyp_(a, b); } \
+VEC_FUNCTION_ATTRIBUTES type_ type_ ## _max(type_ a, type_ b)          { return _mm256_max_p ## mmtyp_(a, b); }
 
 /* Look for SSE to provide implementations of v4f and v2d. */
 #if ((defined(_MSC_VER) && defined(_M_X64)) || (defined(__clang__) && defined(__SSE__))) && (!defined(V4F_EXISTS) || !defined(V2D_EXISTS))
@@ -982,6 +985,7 @@ typedef v1f vlf;
 #endif
 
 #define vlf_st           VLF_LO_OP(st)
+#define vlf_ste0         VLF_LO_OP(ste0)
 #define vlf_ld           VLF_LO_OP(ld)
 #define vlf_lde0         VLF_LO_OP(lde0)
 #define vlf_broadcast    VLF_LO_OP(broadcast)
@@ -1025,6 +1029,7 @@ typedef v1d vld;
 #endif
 
 #define vld_st           VLD_LO_OP(st)
+#define vld_ste0         VLD_LO_OP(ste0)
 #define vld_ld           VLD_LO_OP(ld)
 #define vld_lde0         VLD_LO_OP(lde0)
 #define vld_broadcast    VLD_LO_OP(broadcast)

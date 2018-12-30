@@ -53,7 +53,7 @@ static int vectype_ ## _tests(void) \
 	for (i = 0; i < (veclen_)*MAX((veclen_), 4); i++) { \
 		in[i] = prime_data[i]; \
 	} \
-	/* Load element 0 test */ \
+	/* Load/store element 0 test */ \
 	a = vectype_ ## _ld(in); \
 	b = vectype_ ## _lde0(a, in + (veclen_)); \
 	vectype_ ## _st(out, b); \
@@ -66,6 +66,14 @@ static int vectype_ ## _tests(void) \
 		failures++; \
 	} else { \
 		printf("  " #vectype_ "_lde0() test passed\n"); \
+	} \
+	vectype_ ## _ste0(out, a); \
+	err = out[0] - prime_data[0]; \
+	if (err > 1e-10 || err < -1e-10) { \
+		printf("  " #vectype_ "_ste0() test failed\n"); \
+		failures++; \
+	} else { \
+		printf("  " #vectype_ "_ste0() test passed\n"); \
 	} \
 	/* Addition test */ \
 	a = vectype_ ## _ld(in); \
