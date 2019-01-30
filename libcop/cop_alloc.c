@@ -224,12 +224,12 @@ static size_t cop_alloc_grp_temps_save(struct cop_salloc_iface *a)
 {
 	struct cop_alloc_grp_temps     *gat = a->iface.ctx;
 	struct cop_alloc_grp_temps_buf *buf = gat->first;
-	size_t                          sp  = buf->size;
+	size_t                          tot = buf->size;
 	while (buf->next != NULL) {
-		sp  += buf->alloc_sz;
 		buf  = buf->next;
+		tot += buf->size;
 	}
-	return sp;
+	return tot;
 }
 
 static void cop_alloc_grp_temps_restore(struct cop_salloc_iface *a, size_t s)
@@ -237,48 +237,55 @@ static void cop_alloc_grp_temps_restore(struct cop_salloc_iface *a, size_t s)
 	struct cop_alloc_grp_temps     *gat = a->iface.ctx;
 	struct cop_alloc_grp_temps_buf *buf;
 	size_t tot;
-	size_t acc;
+	size_t rem;
 
 	/* Find total size of all allocations. */
-	tot = 0;
 	buf = gat->first;
-	while (buf != NULL) {
-		tot += buf->alloc_sz;
+	tot = buf->size;
+	while (buf->next != NULL) {
 		buf  = buf->next;
+		tot += buf->size;
 	}
 
 	assert(s <= tot);
 
-	/* Additional buffers may have been added to the start of the list since
-	 * the size was saved. Find allocation containing the saved position by
-	 * unwinding new allocations. */
-	buf = gat->first;
-	acc = tot - buf->alloc_sz;
-	while (s < acc) {
-		buf = buf->next;
-		acc = acc - buf->alloc_sz;
+	/* Free buffers. */
+	rem = tot - s; /* rem is how much we need to deallocate */
+	tot = rem;     /* tot is also how much we need to deallocate */
+	while (rem) {
+		buf = gat->first;
+
 		assert(buf != NULL);
+
+		if (rem <= buf->size) {
+			buf->size -= rem;
+			break;
+		}
+
+		rem        -= buf->size;
+		gat->first  = buf->next;
+		free(buf);
 	}
 
-	/* Remove new allocations. */
-	while (gat->first != buf) {
-		struct cop_alloc_grp_temps_buf *tmp = gat->first;
-		gat->first = tmp->next;
-		free(tmp);
-	}
+	assert(buf == gat->first);
 
-	buf->size  = s - acc;
-	if (buf->size == 0 && tot - acc > buf->alloc_sz) {
-		struct cop_alloc_grp_temps_buf *tmp = realloc(buf, sizeof(*buf) + tot - acc);
-		if (tmp != NULL) {
-			buf = tmp;
-			buf->alloc_sz = tot - acc;
+	/* If the first buffer is now empty and we freed up more than its total
+	 * size, reallocate it to a larger buffer for next use. This assumes the
+	 * next time round, we will allocate a similar amount of memory. */
+	if (buf->size == 0 && tot > buf->alloc_sz) {
+		gat->first = malloc(sizeof(*buf) + tot);
+		if (gat->first != NULL) {
+			gat->first->size = 0;
+			gat->first->alloc_sz = tot;
+			gat->first->next = buf->next;
+			free(buf);
+		} else {
+			gat->first = buf;
 		}
 	}
 
-	gat->first = buf;
+	assert(s == cop_alloc_grp_temps_save(a));
 }
-
 
 int cop_alloc_grp_temps_init(struct cop_alloc_grp_temps *gat, struct cop_salloc_iface *iface, size_t initial_sz, size_t max_grow, size_t default_align)
 {
@@ -297,52 +304,6 @@ int cop_alloc_grp_temps_init(struct cop_alloc_grp_temps *gat, struct cop_salloc_
 	iface->save          = cop_alloc_grp_temps_save;
 	iface->restore       = cop_alloc_grp_temps_restore;
 	return 0;
-}
-
-void cop_alloc_grp_temps_reset(struct cop_alloc_grp_temps *gat, int try_realloc)
-{
-	struct cop_alloc_grp_temps_buf *first = gat->first;
-	struct cop_alloc_grp_temps_buf *bigs = NULL;
-	size_t total_alloc = 0;
-
-	/* Ensure the largest allocation is at the start of the list. */
-	while (first != NULL) {
-		struct cop_alloc_grp_temps_buf *tmp;
-		tmp          = first;
-		first        = tmp->next;
-		total_alloc += tmp->alloc_sz;
-		if (bigs != NULL && tmp->alloc_sz < bigs->alloc_sz) {
-			tmp->next  = bigs->next;
-			bigs->next = tmp;
-		} else {
-			tmp->next = bigs;
-			bigs      = tmp;
-		}
-	}
-	bigs->next = NULL;
-
-	/* Free every allocation after the frist. */
-	if (bigs != NULL) {
-		first = bigs->next;
-		while (first != NULL) {
-			struct cop_alloc_grp_temps_buf *tmp;
-			tmp   = first->next;
-			free(first);
-			first = tmp;
-		}
-	}
-
-	/* */
-	if (try_realloc && total_alloc > bigs->alloc_sz) {
-		struct cop_alloc_grp_temps_buf *tmp = realloc(bigs, sizeof(*bigs) + total_alloc);
-		if (tmp != NULL) {
-			bigs           = tmp;
-			bigs->alloc_sz = total_alloc;
-		}
-	}
-
-	bigs->size = 0;
-	gat->first = bigs;
 }
 
 void cop_alloc_grp_temps_free(struct cop_alloc_grp_temps *gat)
