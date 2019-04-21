@@ -59,12 +59,14 @@ typedef struct {
 	HANDLE                handle;
 	struct cop_thread_arg ret;
 } cop_thread;
+typedef DWORD           cop_tlskey;
 #else
 #include <errno.h>
 #include <pthread.h>
 typedef pthread_cond_t  cop_cond;
 typedef pthread_t       cop_thread;
 typedef pthread_mutex_t cop_mutex;
+typedef pthread_key_t   cop_tlskey;
 #endif
 
 /* The mutex API consists of the following 5 functions
@@ -118,12 +120,18 @@ static int cop_mutex_trylock(cop_mutex *mutex);
  * The thread entry-point prototype is cop_threadproc. */
 static int cop_thread_create(cop_thread *thread, cop_threadproc thread_proc, void *argument, size_t stack_size, int create_detached);
 static int cop_thread_join(cop_thread thread, void **value);
+static unsigned cop_thread_get_id(void);
+
+static void *cop_tlskey_get_pointer(cop_tlskey key);
+static void  cop_tlskey_set_pointer(cop_tlskey key, void *value);
+static int   cop_tlskey_create(cop_tlskey *key);
+static void  cop_tlskey_destroy(cop_tlskey key);
 
 /*****************************************************************************
  * IMPLEMENTATIONS
  ****************************************************************************/
 
-#if defined(_MSC_VER)
+#if defined(_WIN64) || defined (_WIN32)
 
 static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_cond_create(cop_cond *cond)
 {
@@ -218,6 +226,38 @@ static COP_ATTR_UNUSED int cop_thread_join(cop_thread thread, void **value)
 	assert(err == WAIT_FAILED);
 	return COP_THREADERR_UNKNOWN;
 }
+
+#if 0
+/* Untested */
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE unsigned cop_thread_get_id(void) {
+	return GetCurrentThreadId();
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void *cop_tlskey_get_pointer(cop_tlskey key) {
+	void *ret = TlsGetValue(key);
+	assert(ret != NULL || GetLastError() == ERROR_SUCCESS)
+	return ret;
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_tlskey_set_pointer(cop_tlskey key, void *value) {
+	BOOL success = TlsSetValue(key, value);
+	assert(success); (void)success;
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_tlskey_create(cop_tlskey *key) {
+	cop_tlskey k = TlsAlloc();
+	if (k == TLS_OUT_OF_INDEXES) {
+		return -1;
+	}
+	*key = k;
+	return 0;
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_tlskey_destroy(cop_tlskey key) {
+	BOOL success = TlsFree(key);
+	assert(success); (void)success;
+}
+#endif
 
 #else
 
@@ -360,6 +400,40 @@ static COP_ATTR_UNUSED int cop_thread_join(cop_thread thread, void **value)
 		return COP_THREADERR_DEADLOCK;
 	}
 	return 0;
+}
+
+#if __APPLE__
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE unsigned cop_thread_get_id(void) {
+	uint64_t tid;
+	pthread_threadid_np(NULL, &tid);
+	return tid;
+}
+#else
+#include <sys/types.h>
+#include <sys/syscall.h>
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE unsigned cop_thread_get_id(void) {
+	pid_t tid = syscall(__NR_gettid);
+	assert(tid >= 0);
+	return (unsigned)tid;
+}
+#endif
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void *cop_tlskey_get_pointer(cop_tlskey key) {
+	return pthread_getspecific(key);
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_tlskey_set_pointer(cop_tlskey key, void *value) {
+	int failed = pthread_setspecific(key, value);
+	assert(!failed); (void)failed;
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE int cop_tlskey_create(cop_tlskey *key) {
+	return (pthread_key_create(key, NULL)) ? -1 : 0;
+}
+
+static COP_ATTR_UNUSED COP_ATTR_ALWAYSINLINE void cop_tlskey_destroy(cop_tlskey key) {
+	int failed = pthread_key_delete(key);
+	assert(!failed); (void)failed;
 }
 
 #endif
