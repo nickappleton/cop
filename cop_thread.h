@@ -27,6 +27,11 @@
 #ifndef COP_THREAD_H
 #define COP_THREAD_H
 
+#if !defined(_WIN32) && !defined(_WIN64) && !defined(__APPLE__) && (defined(__linux__) || defined(__unix__))
+#define _GNU_SOURCE
+#include <unistd.h> /* syscall() */
+#endif
+
 #include <stdlib.h>
 #include <assert.h>
 #include "cop_attributes.h"
