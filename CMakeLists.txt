@@ -43,7 +43,8 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_LIST_DIR})
     RUNTIME DESTINATION "bin$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
     ARCHIVE DESTINATION "lib$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
     LIBRARY DESTINATION "lib$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
-    PUBLIC_HEADER DESTINATION include/cop)
+    PUBLIC_HEADER DESTINATION include/cop
+    INCLUDES DESTINATION include)
   install(EXPORT cop_targets DESTINATION lib/cmake/cop FILE "copTargets.cmake")
   install(FILES "${CMAKE_BINARY_DIR}/cmake/cop/copConfig.cmake"
                 "${CMAKE_BINARY_DIR}/cmake/cop/copConfigVersion.cmake"
