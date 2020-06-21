@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_LIST_DIR})
   if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    message(STATUS "Setting CMAKE_BUILD_TYPE type to 'Debug' as none was specified.")
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+    message(STATUS "Setting CMAKE_BUILD_TYPE type to 'Release' as none was specified.")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
   endif()
 endif()
@@ -16,7 +16,7 @@ add_library(cop STATIC libcop/cop_filemap.c libcop/cop_alloc.c ${COP_PUBLIC_INCL
 set_property(TARGET cop APPEND PROPERTY PUBLIC_HEADER ${COP_PUBLIC_INCLUDES})
 set_property(TARGET cop PROPERTY ARCHIVE_OUTPUT_DIRECTORY "$<$<NOT:$<CONFIG:Release>>:$<CONFIG>>")
 
-if (x${CMAKE_CXX_COMPILER_ID} STREQUAL "xMSVC")
+if ("x${CMAKE_C_COMPILER_ID}" STREQUAL "xMSVC")
   set_property(TARGET cop APPEND_STRING PROPERTY COMPILE_FLAGS " /W3")
 else()
   set_property(TARGET cop APPEND_STRING PROPERTY COMPILE_FLAGS " -Wall")
@@ -27,6 +27,8 @@ target_include_directories(cop PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 if (UNIX)
   target_link_libraries(cop pthread)
 endif()
+
+add_subdirectory(app_cop_vec_test EXCLUDE_FROM_ALL)
 
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_LIST_DIR})
   include(CMakePackageConfigHelpers)
