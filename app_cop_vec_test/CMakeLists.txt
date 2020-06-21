@@ -10,5 +10,4 @@ else()
   set_property(TARGET cop_vec_test APPEND_STRING PROPERTY COMPILE_FLAGS " -Wall")
 endif()
 
-target_include_directories(cop_vec_test PRIVATE "../..")
 target_link_libraries(cop_vec_test cop)

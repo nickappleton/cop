@@ -28,30 +28,28 @@ if (UNIX)
   target_link_libraries(cop pthread)
 endif()
 
-add_subdirectory(app_cop_vec_test EXCLUDE_FROM_ALL)
+add_subdirectory(app_cop_vec_test)
 
-if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_LIST_DIR})
-  include(CMakePackageConfigHelpers)
-  configure_package_config_file(cmake_support/copConfig.cmake.in ${CMAKE_BINARY_DIR}/cmake/cop/copConfig.cmake
-    INSTALL_DESTINATION "lib/cmake/cop"
-    NO_CHECK_REQUIRED_COMPONENTS_MACRO)
-  write_basic_package_version_file(${CMAKE_BINARY_DIR}/cmake/cop/copConfigVersion.cmake
-    COMPATIBILITY SameMajorVersion)
+include(CMakePackageConfigHelpers)
+configure_package_config_file(cmake_support/copConfig.cmake.in ${CMAKE_BINARY_DIR}/cmake/cop/copConfig.cmake
+  INSTALL_DESTINATION "lib/cmake/cop"
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+write_basic_package_version_file(${CMAKE_BINARY_DIR}/cmake/cop/copConfigVersion.cmake
+  COMPATIBILITY SameMajorVersion)
 
-  export(TARGETS cop FILE "${PROJECT_BINARY_DIR}/cmake/cop/copTargets.cmake")
+export(TARGETS cop FILE "${PROJECT_BINARY_DIR}/cmake/cop/copTargets.cmake")
 
-  install(TARGETS cop
-    EXPORT cop_targets
-    RUNTIME DESTINATION "bin$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
-    ARCHIVE DESTINATION "lib$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
-    LIBRARY DESTINATION "lib$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
-    PUBLIC_HEADER DESTINATION include/cop
-    INCLUDES DESTINATION include)
-  install(EXPORT cop_targets DESTINATION lib/cmake/cop FILE "copTargets.cmake")
-  install(FILES "${CMAKE_BINARY_DIR}/cmake/cop/copConfig.cmake"
-                "${CMAKE_BINARY_DIR}/cmake/cop/copConfigVersion.cmake"
-          DESTINATION "lib/cmake/cop")
-  install(FILES LICENSE DESTINATION share/doc/cop)
-  install(FILES README.md DESTINATION share/doc/cop)
-endif()
+install(TARGETS cop
+  EXPORT cop_targets
+  RUNTIME DESTINATION "bin$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
+  ARCHIVE DESTINATION "lib$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
+  LIBRARY DESTINATION "lib$<$<NOT:$<CONFIG:Release>>:/$<CONFIG>>"
+  PUBLIC_HEADER DESTINATION include/cop
+  INCLUDES DESTINATION include)
+install(EXPORT cop_targets DESTINATION lib/cmake/cop FILE "copTargets.cmake")
+install(FILES "${CMAKE_BINARY_DIR}/cmake/cop/copConfig.cmake"
+              "${CMAKE_BINARY_DIR}/cmake/cop/copConfigVersion.cmake"
+        DESTINATION "lib/cmake/cop")
+install(FILES LICENSE DESTINATION share/doc/cop)
+install(FILES README.md DESTINATION share/doc/cop)
 
