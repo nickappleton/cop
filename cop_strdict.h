@@ -2,7 +2,6 @@
 #define COP_STRDICT_H
 
 #include "cop_strtypes.h"
-#include "cop_alloc.h"
 #include <stddef.h>
 
 struct cop_strdict;
