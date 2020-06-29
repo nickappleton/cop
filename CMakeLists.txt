@@ -10,9 +10,9 @@ endif()
 
 project(cop VERSION 0.1.0 LANGUAGES C)
 
-set(COP_PUBLIC_INCLUDES cop_alloc.h cop_attributes.h cop_conversions.h cop_filemap.h cop_log.h cop_sort.h cop_thread.h cop_vec.h)
+set(COP_PUBLIC_INCLUDES cop_strtypes.h cop_strdict.h cop_alloc.h cop_attributes.h cop_conversions.h cop_filemap.h cop_log.h cop_sort.h cop_thread.h cop_vec.h)
 
-add_library(cop STATIC libcop/cop_filemap.c libcop/cop_alloc.c ${COP_PUBLIC_INCLUDES})
+add_library(cop STATIC libcop/cop_strdict.c libcop/cop_filemap.c libcop/cop_alloc.c ${COP_PUBLIC_INCLUDES})
 set_property(TARGET cop APPEND PROPERTY PUBLIC_HEADER ${COP_PUBLIC_INCLUDES})
 set_property(TARGET cop PROPERTY ARCHIVE_OUTPUT_DIRECTORY "$<$<NOT:$<CONFIG:Release>>:$<CONFIG>>")
 
@@ -28,6 +28,8 @@ if (UNIX)
   target_link_libraries(cop pthread)
 endif()
 
+enable_testing()
+add_subdirectory(tests)
 add_subdirectory(app_cop_vec_test)
 
 include(CMakePackageConfigHelpers)
