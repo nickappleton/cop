@@ -184,13 +184,11 @@ cop_strdict_enumerate_rec
 	,int                       depth
 	) {
 	unsigned i;
-	if (p_fn(p_context, p_node, depth))
-		return -1;
 	for (i = 0; i < COP_STRDICT_CHID_NB; i++)
 		if (p_node->kids[i] != NULL)
 			if (cop_strdict_enumerate_rec(p_node->kids[i], p_fn, p_context, depth + 1))
 				return 1;
-	return 0;
+	return p_fn(p_context, p_node, depth);
 }
 
 int
