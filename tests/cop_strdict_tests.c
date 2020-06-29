@@ -13,7 +13,8 @@ struct cop_strdict_node *make_node(struct cop_salloc_iface *iface, const char *p
 		abort();
 	}
 	memcpy(p_ret + 1, p_id, sl);
-	return cop_strdict_setup_by_cstr(p_ret, (const char *)(p_ret + 1), (void *)(p_ret + 1));
+	cop_strdict_setup_by_cstr(p_ret, (const char *)(p_ret + 1), (void *)(p_ret + 1));
+	return p_ret;
 }
 
 int expect_insert_ok(struct cop_strdict *p_dict, struct cop_strdict_node *p_node) {

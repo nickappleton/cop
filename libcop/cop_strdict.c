@@ -9,20 +9,19 @@ static COP_ATTR_ALWAYSINLINE uint_fast32_t keytolen(uint_fast64_t key) {
 	return (uint_least32_t)(key >> 32);
 }
 
-struct cop_strdict_node *cop_strdict_setup(struct cop_strdict_node *p_node, const struct cop_strh *p_strh, void *p_data) {
+void cop_strdict_setup(struct cop_strdict_node *p_node, const struct cop_strh *p_strh, void *p_data) {
 	unsigned i;
 	p_node->key      = getikey(p_strh);
 	p_node->key_data = p_strh->ptr;
 	p_node->data     = p_data;
 	for (i = 0; i < COP_STRDICT_CHID_NB; i++)
 		p_node->kids[i] = NULL;
-	return p_node;
 }
 
-struct cop_strdict_node *cop_strdict_setup_by_cstr(struct cop_strdict_node *p_node, const char *p_persistent_cstr, void *p_data) {
+void cop_strdict_setup_by_cstr(struct cop_strdict_node *p_node, const char *p_persistent_cstr, void *p_data) {
 	struct cop_strh s;
 	cop_strh_init_shallow(&s, p_persistent_cstr);
-	return cop_strdict_setup(p_node, &s, p_data);
+	cop_strdict_setup(p_node, &s, p_data);
 }
 
 int
