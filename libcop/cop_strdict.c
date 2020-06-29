@@ -24,12 +24,11 @@ void cop_strdict_setup_by_cstr(struct cop_strdict_node *p_node, const char *p_pe
 	cop_strdict_setup(p_node, &s, p_data);
 }
 
-int
+void
 cop_strdict_init
 	(struct cop_strdict     *p_dict
 	) {
 	p_dict->root = NULL;
-	return 0;
 }
 
 int

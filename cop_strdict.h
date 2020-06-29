@@ -8,7 +8,7 @@ struct cop_strdict;
 struct cop_strdict_node;
 
 /* Initialise an empty dictionary. */
-int
+void
 cop_strdict_init
 	(struct cop_strdict     *p_dict
 	);
