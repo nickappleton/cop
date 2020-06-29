@@ -1,5 +1,7 @@
+add_executable(cop_vec_tests cop_vec_tests.c)
+target_link_libraries(cop_vec_tests cop)
+add_test(cop_vec_tests cop_vec_tests)
+
 add_executable(cop_strdict_tests cop_strdict_tests.c)
 target_link_libraries(cop_strdict_tests cop)
 add_test(cop_strdict_tests cop_strdict_tests)
-
-

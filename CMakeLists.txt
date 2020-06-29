@@ -30,7 +30,6 @@ endif()
 
 enable_testing()
 add_subdirectory(tests)
-add_subdirectory(app_cop_vec_test)
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(cmake_support/copConfig.cmake.in ${CMAKE_BINARY_DIR}/cmake/cop/copConfig.cmake
