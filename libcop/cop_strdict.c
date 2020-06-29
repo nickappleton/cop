@@ -191,4 +191,13 @@ cop_strdict_enumerate
 	return cop_strdict_enumerate_rec(*pp_root, p_fn, p_context, 0);
 }
 
+void cop_strdict_node_to_key(const struct cop_strdict_node *p_node, struct cop_strh *p_key) {
+	p_key->hash = p_node->key & 0xFFFFFFFFu;
+	p_key->len  = p_node->key >> 32;
+	p_key->ptr  = p_node->key_data;
+}
+
+void *cop_strdict_node_to_data(const struct cop_strdict_node *p_node) {
+	return p_node->data;
+}
 

@@ -39,6 +39,9 @@ cop_strdict_setup_by_cstr
 	,void                    *p_data
 	);
 
+void cop_strdict_node_to_key(const struct cop_strdict_node *p_node, struct cop_strh *p_key);
+void *cop_strdict_node_to_data(const struct cop_strdict_node *p_node);
+
 /* Insert a node into the dictionary.
  *
  * The key pointer and it's internal key pointer must point to persistent
