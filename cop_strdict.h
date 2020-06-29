@@ -4,14 +4,12 @@
 #include "cop_strtypes.h"
 #include <stddef.h>
 
-struct cop_strdict;
 struct cop_strdict_node;
 
 /* Initialise an empty dictionary. */
-void
-cop_strdict_init
-	(struct cop_strdict     *p_dict
-	);
+static COP_ATTR_UNUSED struct cop_strdict_node *cop_strdict_init(void) {
+	return NULL;
+}
 
 /* Setup a new node with a key and data pointer using a cop_strh structure
  * for the key.
@@ -50,8 +48,8 @@ cop_strdict_setup_by_cstr
  * occurs, no change is made to the dictionary. */
 int
 cop_strdict_insert
-	(struct cop_strdict      *p_dict
-	,struct cop_strdict_node *p_key
+	(struct cop_strdict_node **pp_root
+	,struct cop_strdict_node  *p_key
 	);
 
 /* Find an existing value in the dictionary by cop_strh structure.
@@ -62,9 +60,9 @@ cop_strdict_insert
  * zero if the key exists. It returns non-zero if the key does not exist. */
 int /* zero on success, non-zero when key does not exist */
 cop_strdict_get
-	(struct cop_strdict     *p_dict
-	,const struct cop_strh  *p_key
-	,void                  **pp_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
+	(struct cop_strdict_node **pp_root
+	,const struct cop_strh    *p_key
+	,void                    **pp_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
 	);
 
 /* Find an existing value in the dictionary by null-terminated string.
@@ -77,22 +75,22 @@ cop_strdict_get
  * zero if the key does not exist. */
 int  /* zero on success, non-zero when key does not exist */
 cop_strdict_get_by_cstr
-	(struct cop_strdict     *p_dict
-	,const char             *p_key
-	,void                  **pp_value
+	(struct cop_strdict_node **pp_root
+	,const char               *p_key
+	,void                    **pp_value
 	);
 
 int /* zero on success, non-zero when key does not exist */
 cop_strdict_update
-	(struct cop_strdict     *p_dict
-	,const struct cop_strh  *p_key
-	,void                   *p_value
+	(struct cop_strdict_node **pp_root
+	,const struct cop_strh    *p_key
+	,void                     *p_value
 	);
 int /* zero on success, non-zero when key does not exist */
 cop_strdict_update_by_cstr
-	(struct cop_strdict     *p_dict
-	,const char             *p_key
-	,void                   *p_value
+	(struct cop_strdict_node **pp_root
+	,const char               *p_key
+	,void                     *p_value
 	);
 
 /* Remove an item using a key defined by a cop_strh structure.
@@ -102,8 +100,8 @@ cop_strdict_update_by_cstr
  * cop_strdict_insert() function to insert the node. */
 struct cop_strdict_node *
 cop_strdict_delete
-	(struct cop_strdict    *p_dict
-	,const struct cop_strh *p_key
+	(struct cop_strdict_node **pp_root
+	,const struct cop_strh    *p_key
 	);
 
 /* Remove an item using a key defined by a null-terminated string.
@@ -115,16 +113,16 @@ cop_strdict_delete
  * the node. */
 struct cop_strdict_node *
 cop_strdict_delete_by_cstr
-	(struct cop_strdict    *p_dict
-	,const char            *p_key
+	(struct cop_strdict_node **pp_root
+	,const char               *p_key
 	);
 
 typedef int (cop_strdict_enumerate_fn)(void *p_context, struct cop_strdict_node *p_node, int depth);
 int
 cop_strdict_enumerate
-	(struct cop_strdict       *p_dict
-	,cop_strdict_enumerate_fn *p_fn
-	,void                     *p_context
+	(struct cop_strdict_node  **pp_root
+	,cop_strdict_enumerate_fn  *p_fn
+	,void                      *p_context
 	);
 
 /* ---------------------------------------------------------------------------
@@ -156,13 +154,6 @@ struct cop_strdict_node {
 
 	/* Pointers to child nodes. Initialised to NULL. */
 	struct cop_strdict_node *kids[COP_STRDICT_CHID_NB];
-
-};
-
-/* Dictionary object */
-struct cop_strdict {
-	/* Only needs to know about a root node. */
-	struct cop_strdict_node *root;
 
 };
 

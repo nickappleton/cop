@@ -17,50 +17,50 @@ struct cop_strdict_node *make_node(struct cop_salloc_iface *iface, const char *p
 	return p_ret;
 }
 
-int expect_insert_ok(struct cop_strdict *p_dict, struct cop_strdict_node *p_node) {
-	if (cop_strdict_insert(p_dict, p_node)) {
+int expect_insert_ok(struct cop_strdict_node **pp_root, struct cop_strdict_node *p_node) {
+	if (cop_strdict_insert(pp_root, p_node)) {
 		fprintf(stderr, "expected cop_strdict_insert to succeed\n");
 		return -1;
 	}
-	if (!cop_strdict_insert(p_dict, p_node)) {
+	if (!cop_strdict_insert(pp_root, p_node)) {
 		fprintf(stderr, "expected cop_strdict_insert to fail after calling again\n");
 		return -1;
 	}
 	return 0;
 }
 
-int expect_delete_ok(struct cop_strdict *p_dict, const char *p_key) {
-	if (cop_strdict_delete_by_cstr(p_dict, p_key) == NULL) {
+int expect_delete_ok(struct cop_strdict_node **pp_root, const char *p_key) {
+	if (cop_strdict_delete_by_cstr(pp_root, p_key) == NULL) {
 		fprintf(stderr, "expected cop_strdict_delete_by_cstr to succeed\n");
 		return -1;
 	}
-	if (cop_strdict_delete_by_cstr(p_dict, p_key) != NULL) {
+	if (cop_strdict_delete_by_cstr(pp_root, p_key) != NULL) {
 		fprintf(stderr, "expected cop_strdict_delete_by_cstr to fail after succeeding\n");
 		return -1;
 	}
 	return 0;
 }
 
-int expect_exists(struct cop_strdict *p_dict, const char *p_key) {
-	if (cop_strdict_get_by_cstr(p_dict, p_key, NULL)) {
+int expect_exists(struct cop_strdict_node **pp_root, const char *p_key) {
+	if (cop_strdict_get_by_cstr(pp_root, p_key, NULL)) {
 		fprintf(stderr, "expected to find key %s using cop_strdict_get_by_cstr\n", p_key);
 		return -1;
 	}
 	return 0;
 }
 
-int expect_removed(struct cop_strdict *p_dict, const char *p_key) {
-	if (!cop_strdict_get_by_cstr(p_dict, p_key, NULL)) {
+int expect_removed(struct cop_strdict_node **pp_root, const char *p_key) {
+	if (!cop_strdict_get_by_cstr(pp_root, p_key, NULL)) {
 		fprintf(stderr, "expected to not find key %s using cop_strdict_get_by_cstr\n", p_key);
 		return -1;
 	}
 	return 0;
 }
 
-int expect_update(struct cop_strdict *p_dict, const char *p_key) {
+int expect_update(struct cop_strdict_node **pp_root, const char *p_key) {
 	void *existing_val;
 	void *new_val;
-	if (cop_strdict_get_by_cstr(p_dict, p_key, &existing_val)) {
+	if (cop_strdict_get_by_cstr(pp_root, p_key, &existing_val)) {
 		fprintf(stderr, "expected to not find key %s using cop_strdict_get_by_cstr\n", p_key);
 		return -1;
 	}
@@ -68,11 +68,11 @@ int expect_update(struct cop_strdict *p_dict, const char *p_key) {
 		fprintf(stderr, "expected %s to have data that is its key string (was %s)\n", p_key, existing_val);
 		return -1;
 	}
-	if (cop_strdict_update_by_cstr(p_dict, p_key, NULL)) {
+	if (cop_strdict_update_by_cstr(pp_root, p_key, NULL)) {
 		fprintf(stderr, "expected to be able to update key value for %s\n", p_key);
 		return -1;
 	}
-	if (cop_strdict_get_by_cstr(p_dict, p_key, &new_val)) {
+	if (cop_strdict_get_by_cstr(pp_root, p_key, &new_val)) {
 		fprintf(stderr, "expected to not be able to get value for key %s\n", p_key);
 		return -1;
 	}
@@ -80,11 +80,11 @@ int expect_update(struct cop_strdict *p_dict, const char *p_key) {
 		fprintf(stderr, "key value should have been NULL after update\n");
 		return -1;
 	}
-	if (cop_strdict_update_by_cstr(p_dict, p_key, existing_val)) {
+	if (cop_strdict_update_by_cstr(pp_root, p_key, existing_val)) {
 		fprintf(stderr, "expected to be able to update key value for %s again\n", p_key);
 		return -1;
 	}
-	if (cop_strdict_get_by_cstr(p_dict, p_key, &new_val)) {
+	if (cop_strdict_get_by_cstr(pp_root, p_key, &new_val)) {
 		fprintf(stderr, "expected to be able to get value for key %s\n", p_key);
 		return -1;
 	}
@@ -125,88 +125,84 @@ static void makekey(char *p_buf, uint_fast64_t key) {
 #define ALLOCATIONS (128)
 
 int runtests(struct cop_salloc_iface *iface) {
-	struct cop_strdict dict;
+	struct cop_strdict_node *p_root = cop_strdict_init();
 	unsigned i;
 	char keystr[32];
 
-	cop_strdict_init(&dict);
-
 	for (i = 0; i < ALLOCATIONS; i++) {
 		makekey(keystr, i);
-		if (expect_insert_ok(&dict, make_node(iface, keystr)))
+		if (expect_insert_ok(&p_root, make_node(iface, keystr)))
 			return -1;
 
 	}
 
 	for (i = 0; i < ALLOCATIONS; i++) {
 		makekey(keystr, i);
-		if (expect_exists(&dict, keystr))
+		if (expect_exists(&p_root, keystr))
 			return -1;
 	}
 
 	for (i = 3; i <= 13; i++) {
 		makekey(keystr, i);
-		if (expect_delete_ok(&dict, keystr))
+		if (expect_delete_ok(&p_root, keystr))
 			return -1;
 	}
 
 	for (i = 0; i < 2; i++) {
 		makekey(keystr, i);
-		if (expect_exists(&dict, keystr))
+		if (expect_exists(&p_root, keystr))
 			return -1;
 	}
 	for (i = 3; i <= 13; i++) {
 		makekey(keystr, i);
-		if (expect_removed(&dict, keystr))
+		if (expect_removed(&p_root, keystr))
 			return -1;
 	}
 	for (i = 14; i < ALLOCATIONS; i++) {
 		makekey(keystr, i);
-		if (expect_exists(&dict, keystr))
+		if (expect_exists(&p_root, keystr))
 			return -1;
 	}
 
 	for (i = 5; i <= 10; i++) {
 		makekey(keystr, i);
-		if (expect_insert_ok(&dict, make_node(iface, keystr)))
+		if (expect_insert_ok(&p_root, make_node(iface, keystr)))
 			return -1;
 	}
 
 	for (i = 0; i < 2; i++) {
 		makekey(keystr, i);
-		if (expect_exists(&dict, keystr))
+		if (expect_exists(&p_root, keystr))
 			return -1;
 	}
 	for (i = 3; i <= 4; i++) {
 		makekey(keystr, i);
-		if (expect_removed(&dict, keystr))
+		if (expect_removed(&p_root, keystr))
 			return -1;
 	}
 	for (i = 5; i <= 10; i++) {
 		makekey(keystr, i);
-		if (expect_exists(&dict, keystr))
+		if (expect_exists(&p_root, keystr))
 			return -1;
 	}
 	for (i = 11; i <= 13; i++) {
 		makekey(keystr, i);
-		if (expect_removed(&dict, keystr))
+		if (expect_removed(&p_root, keystr))
 			return -1;
 	}
 	for (i = 14; i < ALLOCATIONS; i++) {
 		makekey(keystr, i);
-		if (expect_exists(&dict, keystr))
+		if (expect_exists(&p_root, keystr))
 			return -1;
 	}
 
 	for (i = 20; i < 54; i++) {
 		makekey(keystr, i);
-		if (expect_update(&dict, keystr))
+		if (expect_update(&p_root, keystr))
 			return -1;
 	}
 
-
-
-	//cop_strdict_enumerate(&dict, enumfn, NULL);
+	//cop_strdict_enumerate(&p_root, enumfn, NULL);
 
 	return 0;
 }
