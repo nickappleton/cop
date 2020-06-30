@@ -4,7 +4,8 @@
 #include "cop_attributes.h"
 #include <stdint.h>
 
-/* cop_strh is used to hold a string. */
+/* A cop_strh is used to hold a pointer to a known-length string of hashed
+ * bytes. */
 struct cop_strh {
 	/* Number of bytes in the data blob. */
 	uint_fast32_t        len;

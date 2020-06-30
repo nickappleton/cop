@@ -26,24 +26,24 @@ void cop_strdict_node_init_by_cstr(struct cop_strdict_node *p_node, const char *
 
 int
 cop_strdict_get_by_cstr
-	(struct cop_strdict_node **pp_root
-	,const char               *p_key
-	,void                    **pp_value
+	(const struct cop_strdict_node  *p_root
+	,const char                     *p_key
+	,void                          **pp_value
 	) {
 	struct cop_strh s;
 	cop_strh_init_shallow(&s, p_key);
-	return cop_strdict_get(pp_root, &s, pp_value);
+	return cop_strdict_get(p_root, &s, pp_value);
 }
 
 int
 cop_strdict_update_by_cstr
-	(struct cop_strdict_node **pp_root
-	,const char               *p_key
-	,void                     *p_value
+	(struct cop_strdict_node *p_root
+	,const char              *p_key
+	,void                    *p_value
 	) {
 	struct cop_strh s;
 	cop_strh_init_shallow(&s, p_key);
-	return cop_strdict_update(pp_root, &s, p_value);
+	return cop_strdict_update(p_root, &s, p_value);
 }
 
 struct cop_strdict_node *
@@ -58,20 +58,19 @@ cop_strdict_delete_by_cstr
 
 int
 cop_strdict_get
-	(struct cop_strdict_node **pp_root
-	,const struct cop_strh    *p_key
-	,void                    **pp_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
+	(const struct cop_strdict_node  *p_root
+	,const struct cop_strh          *p_key
+	,void                          **pp_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
 	) {
-	uint_fast64_t            ikey   = getikey(p_key);
-	uint_fast64_t            ukey   = ikey;
-	struct cop_strdict_node *p_node = *pp_root;
-	while (p_node != NULL) {
-		if (p_node->key == ikey && !memcmp(p_node->key_data, p_key->ptr, p_key->len)) {
+	uint_fast64_t ikey = getikey(p_key);
+	uint_fast64_t ukey = ikey;
+	while (p_root != NULL) {
+		if (p_root->key == ikey && !memcmp(p_root->key_data, p_key->ptr, p_key->len)) {
 			if (pp_value != NULL)
-				*pp_value = p_node->data;
+				*pp_value = p_root->data;
 			return 0;
 		}
-		p_node   = p_node->kids[ukey & COP_STRDICT_CHID_MASK];
+		p_root   = p_root->kids[ukey & COP_STRDICT_CHID_MASK];
 		ukey   >>= COP_STRDICT_CHID_BITS;
 	}
 	return -1;
@@ -79,19 +78,18 @@ cop_strdict_get
 
 int
 cop_strdict_update
-	(struct cop_strdict_node **pp_root
-	,const struct cop_strh    *p_key
-	,void                     *p_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
+	(struct cop_strdict_node *p_root
+	,const struct cop_strh   *p_key
+	,void                    *p_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
 	) {
-	uint_fast64_t            ikey   = getikey(p_key);
-	uint_fast64_t            ukey   = ikey;
-	struct cop_strdict_node *p_node = *pp_root;
-	while (p_node != NULL) {
-		if (p_node->key == ikey && !memcmp(p_node->key_data, p_key->ptr, p_key->len)) {
-			p_node->data = p_value;
+	uint_fast64_t ikey = getikey(p_key);
+	uint_fast64_t ukey = ikey;
+	while (p_root != NULL) {
+		if (p_root->key == ikey && !memcmp(p_root->key_data, p_key->ptr, p_key->len)) {
+			p_root->data = p_value;
 			return 0;
 		}
-		p_node   = p_node->kids[ukey & COP_STRDICT_CHID_MASK];
+		p_root   = p_root->kids[ukey & COP_STRDICT_CHID_MASK];
 		ukey   >>= COP_STRDICT_CHID_BITS;
 	}
 	return -1;
@@ -184,13 +182,13 @@ cop_strdict_enumerate_rec
 
 int
 cop_strdict_enumerate
-	(struct cop_strdict_node  **pp_root
-	,cop_strdict_enumerate_fn  *p_fn
-	,void                      *p_context
+	(struct cop_strdict_node  *p_root
+	,cop_strdict_enumerate_fn *p_fn
+	,void                     *p_context
 	) {
-	if (*pp_root == NULL)
+	if (p_root == NULL)
 		return 0;
-	return cop_strdict_enumerate_rec(*pp_root, p_fn, p_context, 0);
+	return cop_strdict_enumerate_rec(p_root, p_fn, p_context, 0);
 }
 
 void cop_strdict_node_to_key(const struct cop_strdict_node *p_node, struct cop_strh *p_key) {

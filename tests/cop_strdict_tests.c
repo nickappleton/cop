@@ -42,7 +42,7 @@ int expect_delete_ok(struct cop_strdict_node **pp_root, const char *p_key) {
 }
 
 int expect_exists(struct cop_strdict_node **pp_root, const char *p_key) {
-	if (cop_strdict_get_by_cstr(pp_root, p_key, NULL)) {
+	if (cop_strdict_get_by_cstr(*pp_root, p_key, NULL)) {
 		fprintf(stderr, "expected to find key %s using cop_strdict_get_by_cstr\n", p_key);
 		return -1;
 	}
@@ -50,7 +50,7 @@ int expect_exists(struct cop_strdict_node **pp_root, const char *p_key) {
 }
 
 int expect_removed(struct cop_strdict_node **pp_root, const char *p_key) {
-	if (!cop_strdict_get_by_cstr(pp_root, p_key, NULL)) {
+	if (!cop_strdict_get_by_cstr(*pp_root, p_key, NULL)) {
 		fprintf(stderr, "expected to not find key %s using cop_strdict_get_by_cstr\n", p_key);
 		return -1;
 	}
@@ -60,7 +60,7 @@ int expect_removed(struct cop_strdict_node **pp_root, const char *p_key) {
 int expect_update(struct cop_strdict_node **pp_root, const char *p_key) {
 	void *existing_val;
 	void *new_val;
-	if (cop_strdict_get_by_cstr(pp_root, p_key, &existing_val)) {
+	if (cop_strdict_get_by_cstr(*pp_root, p_key, &existing_val)) {
 		fprintf(stderr, "expected to not find key %s using cop_strdict_get_by_cstr\n", p_key);
 		return -1;
 	}
@@ -68,11 +68,11 @@ int expect_update(struct cop_strdict_node **pp_root, const char *p_key) {
 		fprintf(stderr, "expected %s to have data that is its key string (was %s)\n", p_key, existing_val);
 		return -1;
 	}
-	if (cop_strdict_update_by_cstr(pp_root, p_key, NULL)) {
+	if (cop_strdict_update_by_cstr(*pp_root, p_key, NULL)) {
 		fprintf(stderr, "expected to be able to update key value for %s\n", p_key);
 		return -1;
 	}
-	if (cop_strdict_get_by_cstr(pp_root, p_key, &new_val)) {
+	if (cop_strdict_get_by_cstr(*pp_root, p_key, &new_val)) {
 		fprintf(stderr, "expected to not be able to get value for key %s\n", p_key);
 		return -1;
 	}
@@ -80,11 +80,11 @@ int expect_update(struct cop_strdict_node **pp_root, const char *p_key) {
 		fprintf(stderr, "key value should have been NULL after update\n");
 		return -1;
 	}
-	if (cop_strdict_update_by_cstr(pp_root, p_key, existing_val)) {
+	if (cop_strdict_update_by_cstr(*pp_root, p_key, existing_val)) {
 		fprintf(stderr, "expected to be able to update key value for %s again\n", p_key);
 		return -1;
 	}
-	if (cop_strdict_get_by_cstr(pp_root, p_key, &new_val)) {
+	if (cop_strdict_get_by_cstr(*pp_root, p_key, &new_val)) {
 		fprintf(stderr, "expected to be able to get value for key %s\n", p_key);
 		return -1;
 	}
@@ -218,6 +218,10 @@ int main(int argc, char *argv[]) {
 	rflag = runtests(&iface);
 
 	cop_alloc_virtual_free(&mem);
+
+	if (!rflag) {
+		fprintf(stdout, "strdict tests passed\n");
+	}
 
 	return (rflag) ? EXIT_FAILURE : EXIT_SUCCESS;
 }

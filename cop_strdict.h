@@ -63,9 +63,9 @@ cop_strdict_insert
  * zero if the key exists. It returns non-zero if the key does not exist. */
 int /* zero on success, non-zero when key does not exist */
 cop_strdict_get
-	(struct cop_strdict_node **pp_root
-	,const struct cop_strh    *p_key
-	,void                    **pp_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
+	(const struct cop_strdict_node  *p_root
+	,const struct cop_strh          *p_key
+	,void                         **pp_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
 	);
 
 /* Find an existing value in the dictionary by null-terminated string.
@@ -78,22 +78,22 @@ cop_strdict_get
  * zero if the key does not exist. */
 int  /* zero on success, non-zero when key does not exist */
 cop_strdict_get_by_cstr
-	(struct cop_strdict_node **pp_root
-	,const char               *p_key
-	,void                    **pp_value
+	(const struct cop_strdict_node  *p_root
+	,const char                     *p_key
+	,void                          **pp_value
 	);
 
 int /* zero on success, non-zero when key does not exist */
 cop_strdict_update
-	(struct cop_strdict_node **pp_root
-	,const struct cop_strh    *p_key
-	,void                     *p_value
+	(struct cop_strdict_node *p_root
+	,const struct cop_strh   *p_key
+	,void                    *p_value
 	);
 int /* zero on success, non-zero when key does not exist */
 cop_strdict_update_by_cstr
-	(struct cop_strdict_node **pp_root
-	,const char               *p_key
-	,void                     *p_value
+	(struct cop_strdict_node *p_root
+	,const char              *p_key
+	,void                    *p_value
 	);
 
 /* Remove an item using a key defined by a cop_strh structure.
@@ -135,9 +135,9 @@ typedef int (cop_strdict_enumerate_fn)(void *p_context, struct cop_strdict_node 
  * all the child nodes will have already been enumerated). */
 int
 cop_strdict_enumerate
-	(struct cop_strdict_node  **pp_root
-	,cop_strdict_enumerate_fn  *p_fn
-	,void                      *p_context
+	(struct cop_strdict_node  *p_root
+	,cop_strdict_enumerate_fn *p_fn
+	,void                     *p_context
 	);
 
 /* ---------------------------------------------------------------------------
