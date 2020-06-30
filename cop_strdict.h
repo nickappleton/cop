@@ -93,7 +93,7 @@ int /* zero on success, non-zero when key does not exist */
 cop_strdict_get
 	(const struct cop_strdict_node  *p_root
 	,const struct cop_strh          *p_key
-	,void                         **pp_value /* ignored unless COP_STRDICT_FIND_STORE in flags */
+	,void                         **pp_value
 	);
 
 /* Find an existing value in the dictionary by null-terminated string.
