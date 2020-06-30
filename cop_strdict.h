@@ -4,12 +4,30 @@
 #include "cop_strtypes.h"
 #include <stddef.h>
 
+/* This structure is defined later in this header. Don't access members
+ * directly. Use the accessor functions below. */
 struct cop_strdict_node;
 
-/* Initialise an empty dictionary. */
+/* ---------------------------------------------------------------------------
+ * Dictionary initialisation and cleanup
+ * ------------------------------------------------------------------------ */
+
+/* Initialise an empty dictionary. You do not strictly need to use this
+ * function and may always assign the root-node pointer to null. There are no
+ * cleanup functions as this library does not perform any allocations. If you
+ * dynamically allocate nodes and wish to free them, you may use the enumerate
+ * method to achieve this. */
 static COP_ATTR_UNUSED struct cop_strdict_node *cop_strdict_init(void) {
 	return NULL;
 }
+
+/* ---------------------------------------------------------------------------
+ * Node initialisation prior to insertion
+ * 
+ * Use the below functions to prepare a node to be inserted into the
+ * dictionary using cop_strdict_insert() or extract the key or data from an
+ * a node that has been setup.
+ * ------------------------------------------------------------------------ */
 
 /* Setup a new node with a key and data pointer using a cop_strh structure
  * for the key.
@@ -17,7 +35,7 @@ static COP_ATTR_UNUSED struct cop_strdict_node *cop_strdict_init(void) {
  * The function takes a cop_strdict_node structure and fills in the required
  * parameters. The cop_strh structure will be used for the key and must have a
  * persistent data pointer. p_data is the initial data pointer value. No
- * allocations take place. */
+ * allocations take place. It is undefined for p_node or p_strh to be null. */
 void
 cop_strdict_node_init
 	(struct cop_strdict_node *p_node
@@ -31,7 +49,8 @@ cop_strdict_node_init
  * The function takes a cop_strdict_node structure and fills in the required
  * parameters. p_persistent_cstr must be a persistent null-terminated string
  * which will be used for the key. p_data is the initial data pointer value.
- * No allocations take place. */
+ * No allocations take place. It is undefined for p_node or p_persistend_cstr
+ * to be null. */
 void
 cop_strdict_node_init_by_cstr
 	(struct cop_strdict_node *p_node
@@ -39,8 +58,17 @@ cop_strdict_node_init_by_cstr
 	,void                    *p_data
 	);
 
+/* Get the key from an initialised node. The function never fails. It is
+ * undefined for p_node to be null. */
 void cop_strdict_node_to_key(const struct cop_strdict_node *p_node, struct cop_strh *p_key);
+
+/* Return the data pointer from an initialised node. The function never
+ * fails. It is undefined for p_node to be null. */
 void *cop_strdict_node_to_data(const struct cop_strdict_node *p_node);
+
+/* ---------------------------------------------------------------------------
+ * Dictionary insertion, retrieval, modification and deletion methods
+ * ------------------------------------------------------------------------ */
 
 /* Insert a node into the dictionary.
  *
@@ -120,8 +148,15 @@ cop_strdict_delete_by_cstr
 	,const char               *p_key
 	);
 
+/* ---------------------------------------------------------------------------
+ * Enumeration of dictionary keys and values.
+ * ------------------------------------------------------------------------ */
+
 /* Return non-zero in the enumeration function to signal an early termination
- * of the enumeration. */
+ * of the enumeration. p_context will have the value passed as p_context to
+ * the call to cop_strdict_enumerate. p_node is the current node and may be
+ * examined using the cop_strdict_node_to_* functions - it is never null.
+ * depth is the height of the node in the tree and is purely informational. */
 typedef int (cop_strdict_enumerate_fn)(void *p_context, struct cop_strdict_node *p_node, int depth);
 
 /* Enumerate the keys in the dictionary. The return value is zero if all calls
@@ -132,7 +167,9 @@ typedef int (cop_strdict_enumerate_fn)(void *p_context, struct cop_strdict_node 
  * The ordering of the enumeration is strictly leaves-first. This permits
  * using the enumerate function to clean up memory for dynamically allocated
  * node objects (i.e. you may call free(p_node) in the callback function as
- * all the child nodes will have already been enumerated). */
+ * all the child nodes will have already been enumerated). The value of
+ * p_context is passed to the callback function. p_root is the root node which
+ * may be NULL (which will result in no calls to the callback). */
 int
 cop_strdict_enumerate
 	(struct cop_strdict_node  *p_root
