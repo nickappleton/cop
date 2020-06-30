@@ -19,7 +19,7 @@ static COP_ATTR_UNUSED struct cop_strdict_node *cop_strdict_init(void) {
  * persistent data pointer. p_data is the initial data pointer value. No
  * allocations take place. */
 void
-cop_strdict_setup
+cop_strdict_node_init
 	(struct cop_strdict_node *p_node
 	,const struct cop_strh   *p_strh
 	,void                    *p_data
@@ -33,7 +33,7 @@ cop_strdict_setup
  * which will be used for the key. p_data is the initial data pointer value.
  * No allocations take place. */
 void
-cop_strdict_setup_by_cstr
+cop_strdict_node_init_by_cstr
 	(struct cop_strdict_node *p_node
 	,const char              *p_persistent_cstr
 	,void                    *p_data
@@ -120,7 +120,19 @@ cop_strdict_delete_by_cstr
 	,const char               *p_key
 	);
 
+/* Return non-zero in the enumeration function to signal an early termination
+ * of the enumeration. */
 typedef int (cop_strdict_enumerate_fn)(void *p_context, struct cop_strdict_node *p_node, int depth);
+
+/* Enumerate the keys in the dictionary. The return value is zero if all calls
+ * to the callback return zero. If a callback function ever returns non-zero,
+ * the enumeration terminates and the return value of the terminating callback
+ * is returned.
+ * 
+ * The ordering of the enumeration is strictly leaves-first. This permits
+ * using the enumerate function to clean up memory for dynamically allocated
+ * node objects (i.e. you may call free(p_node) in the callback function as
+ * all the child nodes will have already been enumerated). */
 int
 cop_strdict_enumerate
 	(struct cop_strdict_node  **pp_root

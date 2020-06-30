@@ -13,7 +13,7 @@ struct cop_strdict_node *make_node(struct cop_salloc_iface *iface, const char *p
 		abort();
 	}
 	memcpy(p_ret + 1, p_id, sl);
-	cop_strdict_setup_by_cstr(p_ret, (const char *)(p_ret + 1), (void *)(p_ret + 1));
+	cop_strdict_node_init_by_cstr(p_ret, (const char *)(p_ret + 1), (void *)(p_ret + 1));
 	return p_ret;
 }
 
