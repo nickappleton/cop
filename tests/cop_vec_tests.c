@@ -51,7 +51,7 @@ static int vectype_ ## _tests(void) \
 	basetype_ err2; \
 	printf("executing tests for " #vectype_ "vector type\n"); \
 	for (i = 0; i < (veclen_)*MAX((veclen_), 4); i++) { \
-		in[i] = prime_data[i]; \
+		in[i] = (basetype_)prime_data[i]; \
 	} \
 	/* Load/store element 0 test */ \
 	a = vectype_ ## _ld(in); \

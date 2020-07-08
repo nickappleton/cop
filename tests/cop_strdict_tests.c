@@ -58,9 +58,9 @@ int expect_removed(struct cop_strdict_node **pp_root, const char *p_key) {
 }
 
 int expect_update(struct cop_strdict_node **pp_root, const char *p_key) {
-	void *existing_val;
+	char *existing_val;
 	void *new_val;
-	if (cop_strdict_get_by_cstr(*pp_root, p_key, &existing_val)) {
+	if (cop_strdict_get_by_cstr(*pp_root, p_key, (void **)&existing_val)) {
 		fprintf(stderr, "expected to not find key %s using cop_strdict_get_by_cstr\n", p_key);
 		return -1;
 	}
@@ -109,7 +109,7 @@ uint_fast32_t get_id(uint_fast32_t x) {
 		return (1456900 + (x - 64)) & 0xFFFFFFFF;
 }
 
-static void makekey(char *p_buf, uint_fast64_t key) {
+static void makekey(char *p_buf, uint_fast32_t key) {
 	key      = get_id(key);
 	p_buf[0] = '0' + ((key / 10000000) % 10);
 	p_buf[1] = '0' + ((key / 1000000) % 10);

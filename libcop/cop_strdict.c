@@ -114,7 +114,7 @@ cop_strdict_insert
 	return 0;
 }
 
-static int findkid(const struct cop_strdict_node *p_node, unsigned offset) {
+static int findkid(const struct cop_strdict_node *p_node, uint_fast64_t offset) {
 	unsigned i;
 	for (i = 0; i < COP_STRDICT_CHID_NB; i++)
 		if (p_node->kids[(i + offset) & COP_STRDICT_CHID_MASK] != NULL)
@@ -159,8 +159,6 @@ cop_strdict_delete
 	}
 	return p_ret;
 }
-
-typedef int (cop_strdict_enumerate_fn)(void *p_context, struct cop_strdict_node *p_node, int depth);
 
 static
 int
