@@ -66,5 +66,9 @@ struct cop_filemap {
 int  cop_filemap_open(struct cop_filemap *map, const char *filename, unsigned flags);
 void cop_filemap_close(struct cop_filemap *map);
 
+/* Dump the blob of memory in buffer with the given size into a file with the
+ * given name. The function returns zero on success. */
+int cop_file_dump(const char *filename, void *buffer, size_t size);
+
 #endif /* COP_FILEMAP */
 

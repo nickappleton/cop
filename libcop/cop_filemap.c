@@ -25,14 +25,49 @@
 
 #include <stdlib.h>
 
-int cop_filemap_open(struct cop_filemap *map, const char *filename, unsigned flags)
-{
+static LPWSTR utf8_to_w(const char *ustr) {
+	LPWSTR        wfn;
+	int           fnlen;
+	fnlen = MultiByteToWideChar(CP_UTF8, 0, ustr, -1, NULL, 0);
+	if (fnlen == 0)
+		return NULL;
+	wfn = malloc(sizeof(*wfn) * fnlen);
+	if (wfn == NULL)
+		return NULL;
+	if (MultiByteToWideChar(CP_UTF8, 0, ustr, -1, wfn, fnlen) != fnlen) {
+		free(wfn);
+		return NULL;
+	}
+	return wfn;
+}
+
+int cop_file_dump(const char *filename, void *buffer, size_t size) {
+	LPWSTR wfn;
+	HANDLE f;
+	DWORD  nwritten;
+	if (size > MAXDWORD || (wfn = utf8_to_w(filename)) == NULL)
+		return -1;
+	f = CreateFileW(wfn, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (f == INVALID_HANDLE_VALUE) {
+		free(wfn);
+		return -1;
+	}
+	if (!WriteFile(f, buffer, (DWORD)size, &nwritten, NULL) || nwritten != (DWORD)size) {
+		CloseHandle(f);
+		free(wfn);
+		return -1;
+	}
+	CloseHandle(f);
+	free(wfn);
+	return 0;
+}
+
+int cop_filemap_open(struct cop_filemap *map, const char *filename, unsigned flags) {
 	DWORD faccess;
 	DWORD mapprotect;
 	DWORD mapaccess;
 	LARGE_INTEGER fsz;
 	LPWSTR wfn;
-	int fnlen;
 
 	if ((flags & COP_FILEMAP_FLAG_W) == 0) {
 		/* read only access */
@@ -51,18 +86,8 @@ int cop_filemap_open(struct cop_filemap *map, const char *filename, unsigned fla
 		mapaccess  = FILE_MAP_COPY;
 	}
 
-	fnlen = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-	if (fnlen == 0)
+	if ((wfn = utf8_to_w(filename)) == NULL)
 		return -1;
-
-	wfn = malloc(sizeof(*wfn) * fnlen);
-	if (wfn == NULL)
-		return -1;
-
-	if (MultiByteToWideChar(CP_UTF8, 0, filename, -1, wfn, fnlen) != fnlen) {
-		free(wfn);
-		return -1;
-	}
 
 	map->filehandle = CreateFileW(wfn, faccess, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (map->filehandle == INVALID_HANDLE_VALUE) {
@@ -151,6 +176,20 @@ int cop_filemap_open(struct cop_filemap *map, const char *filename, unsigned fla
 void cop_filemap_close(struct cop_filemap *map)
 {
 	munmap(map->ptr, map->size);
+}
+
+#include <stdio.h>
+
+int cop_file_dump(const char *filename, const unsigned char *buf, size_t sz) {
+	FILE *f;
+	if ((f = fopen(filename, "wb")) == NULL)
+		return -1;
+	if (fwrite(buf, 1, sz, f) != sz) {
+		fclose(f);
+		return -1;
+	}
+	fclose(f);
+	return 0;
 }
 
 #endif
