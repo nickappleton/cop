@@ -20,6 +20,7 @@
 
 /* TODO: This test suite is not complete! */
 
+#include "cop/cop_main.h"
 #include "cop/cop_vec.h"
 #include <stdio.h>
 
@@ -349,7 +350,7 @@ MAKE_BASIC_TESTS(V8F, v8f, float,  8)
 MAKE_BASIC_TESTS(V4D, v4d, double, 4)
 #endif
 
-int main(int argc, char *argv[])
+static int test_main(int argc, char *argv[])
 {
 	int failures = 0;
 	failures += v1f_tests();
@@ -387,3 +388,6 @@ int main(int argc, char *argv[])
 
 	return failures;
 }
+
+COP_MAIN(test_main)
+

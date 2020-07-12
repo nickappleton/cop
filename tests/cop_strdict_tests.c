@@ -1,3 +1,4 @@
+#include "cop/cop_main.h"
 #include "cop/cop_strdict.h"
 #include "cop/cop_alloc.h"
 #include <stdio.h>
@@ -207,7 +208,7 @@ int runtests(struct cop_salloc_iface *iface) {
 	return 0;
 }
 
-int main(int argc, char *argv[]) {
+int test_main(int argc, char *argv[]) {
 	struct cop_alloc_virtual mem;
 	struct cop_salloc_iface  iface;
 	int                      rflag;
@@ -225,3 +226,5 @@ int main(int argc, char *argv[]) {
 
 	return (rflag) ? EXIT_FAILURE : EXIT_SUCCESS;
 }
+
+COP_MAIN(test_main)

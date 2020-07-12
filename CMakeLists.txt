@@ -10,14 +10,14 @@ endif()
 
 project(cop VERSION 0.1.0 LANGUAGES C)
 
-set(COP_PUBLIC_INCLUDES cop_strtypes.h cop_strdict.h cop_alloc.h cop_attributes.h cop_conversions.h cop_filemap.h cop_log.h cop_sort.h cop_thread.h cop_vec.h)
+set(COP_PUBLIC_INCLUDES cop_main.h cop_strtypes.h cop_strdict.h cop_alloc.h cop_attributes.h cop_conversions.h cop_filemap.h cop_log.h cop_sort.h cop_thread.h cop_vec.h)
 
 add_library(cop STATIC libcop/cop_strdict.c libcop/cop_filemap.c libcop/cop_alloc.c ${COP_PUBLIC_INCLUDES})
 set_property(TARGET cop APPEND PROPERTY PUBLIC_HEADER ${COP_PUBLIC_INCLUDES})
 set_property(TARGET cop PROPERTY ARCHIVE_OUTPUT_DIRECTORY "$<$<NOT:$<CONFIG:Release>>:$<CONFIG>>")
 
 if ("x${CMAKE_C_COMPILER_ID}" STREQUAL "xMSVC")
-  set_property(TARGET cop APPEND_STRING PROPERTY COMPILE_FLAGS " /W3")
+  set_property(TARGET cop APPEND_STRING PROPERTY COMPILE_FLAGS " /W4")
 else()
   set_property(TARGET cop APPEND_STRING PROPERTY COMPILE_FLAGS " -Wall")
 endif()
