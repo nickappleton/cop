@@ -41,7 +41,7 @@ static LPWSTR utf8_to_w(const char *ustr) {
 	return wfn;
 }
 
-int cop_file_dump(const char *filename, void *buffer, size_t size) {
+int cop_file_dump(const char *filename, const void *buffer, size_t size) {
 	LPWSTR wfn;
 	HANDLE f;
 	DWORD  nwritten;
@@ -180,7 +180,7 @@ void cop_filemap_close(struct cop_filemap *map)
 
 #include <stdio.h>
 
-int cop_file_dump(const char *filename, const unsigned char *buf, size_t sz) {
+int cop_file_dump(const char *filename, const void *buf, size_t sz) {
 	FILE *f;
 	if ((f = fopen(filename, "wb")) == NULL)
 		return -1;
