@@ -200,87 +200,65 @@ static void *alloc_grp_temps(struct cop_alloc_iface *a, size_t size, size_t alig
 	if (align == 0)
 		align = ctx->default_align;
 	assert(align);
-	start = ctx->first->size + aalloc_alignoffset((size_t)(ctx->first + 1) + ctx->first->size, align - 1);
-	if (start + size > ctx->first->alloc_sz) {
+	start = ctx->head->size + aalloc_alignoffset((size_t)(ctx->head + 1) + ctx->head->size, align - 1);
+	if (start + size > ctx->head->alloc_sz) {
 		struct cop_alloc_grp_temps_buf *nb;
 		size_t min_alloc    = size + align - 1;
-		size_t actual_alloc = ctx->first->size * 2;
+		size_t actual_alloc = ctx->head->size * 2;
 		actual_alloc = (actual_alloc > ctx->max_grow) ? ctx->max_grow : actual_alloc;
 		actual_alloc = (actual_alloc < min_alloc) ? min_alloc : actual_alloc;
 		nb = malloc(sizeof(*nb) + actual_alloc);
 		if (nb == NULL)
 			return NULL;
-		nb->alloc_sz = actual_alloc;
-		nb->size     = 0;
-		nb->next     = ctx->first;
-		ctx->first   = nb;
-		start        = aalloc_alignoffset((size_t)(ctx->first + 1), align - 1);
+		nb->alloc_sz        = actual_alloc;
+		nb->size            = 0;
+		nb->prev            = ctx->head;
+		ctx->pre_head_size += ctx->head->size;
+		ctx->head           = nb;
+		start               = aalloc_alignoffset((size_t)(ctx->head + 1), align - 1);
 	}
-	ctx->first->size = start + size;
-	return (unsigned char *)(ctx->first + 1) + start;
+	ctx->head->size = start + size;
+	return (unsigned char *)(ctx->head + 1) + start;
 }
 
-static size_t cop_alloc_grp_temps_save(struct cop_salloc_iface *a)
-{
+static size_t cop_alloc_grp_temps_save(struct cop_salloc_iface *a) {
 	struct cop_alloc_grp_temps     *gat = a->iface.ctx;
-	struct cop_alloc_grp_temps_buf *buf = gat->first;
-	size_t                          tot = buf->size;
-	while (buf->next != NULL) {
-		buf  = buf->next;
-		tot += buf->size;
-	}
-	return tot;
+	struct cop_alloc_grp_temps_buf *buf = gat->head;
+	return gat->pre_head_size + buf->size;
 }
 
-static void cop_alloc_grp_temps_restore(struct cop_salloc_iface *a, size_t s)
-{
-	struct cop_alloc_grp_temps     *gat = a->iface.ctx;
-	struct cop_alloc_grp_temps_buf *buf;
-	size_t tot;
-	size_t rem;
+static void cop_alloc_grp_temps_restore(struct cop_salloc_iface *a, size_t s) {
+	struct cop_alloc_grp_temps     *gat        = a->iface.ctx;
+	struct cop_alloc_grp_temps_buf *buf        = gat->head;
+	size_t                          total_size = gat->pre_head_size + buf->size;
+	size_t                          deallocate = (assert(s <= total_size), total_size - s);
 
-	/* Find total size of all allocations. */
-	buf = gat->first;
-	tot = buf->size;
-	while (buf->next != NULL) {
-		buf  = buf->next;
-		tot += buf->size;
-	}
-
-	assert(s <= tot);
-
-	/* Free buffers. */
-	rem = tot - s; /* rem is how much we need to deallocate */
-	tot = rem;     /* tot is also how much we need to deallocate */
-	while (rem) {
-		buf = gat->first;
-
-		assert(buf != NULL);
-
-		if (rem <= buf->size) {
-			buf->size -= rem;
+	while (deallocate > buf->size) {
+		gat->head           = buf->prev;
+		deallocate         -= buf->size;
+		free(buf);
+		buf                 = gat->head;
+		if (buf == NULL) {
+			assert(gat->pre_head_size == 0);
 			break;
 		}
-
-		rem        -= buf->size;
-		gat->first  = buf->next;
-		free(buf);
+		gat->pre_head_size -= buf->size;
 	}
 
-	assert(buf == gat->first);
-
-	/* If the first buffer is now empty and we freed up more than its total
-	 * size, reallocate it to a larger buffer for next use. This assumes the
-	 * next time round, we will allocate a similar amount of memory. */
-	if (buf->size == 0 && tot > buf->alloc_sz) {
-		gat->first = malloc(sizeof(*buf) + tot);
-		if (gat->first != NULL) {
-			gat->first->size = 0;
-			gat->first->alloc_sz = tot;
-			gat->first->next = buf->next;
+	if (buf != NULL) {
+		assert(buf->size >= deallocate);
+		buf->size -= deallocate;
+	}
+	
+	if (gat->pre_head_size == 0 && buf->size == 0 && total_size > buf->alloc_sz) {
+		gat->head = malloc(sizeof(*buf) + total_size);
+		if (gat->head != NULL) {
+			gat->head->size     = 0;
+			gat->head->alloc_sz = total_size;
+			gat->head->prev     = NULL;
 			free(buf);
 		} else {
-			gat->first = buf;
+			gat->head = buf;
 		}
 	}
 
@@ -291,14 +269,15 @@ int cop_alloc_grp_temps_init(struct cop_alloc_grp_temps *gat, struct cop_salloc_
 {
 	initial_sz           = initial_sz ? initial_sz : cop_memory_query_page_size();
 	initial_sz           = initial_sz ? initial_sz : 1024;
-	gat->first           = malloc(sizeof(gat->first[0]) + initial_sz);
-	if (gat->first == NULL)
+	gat->head            = malloc(sizeof(gat->head[0]) + initial_sz);
+	if (gat->head == NULL)
 		return -1;
-	gat->first->alloc_sz = initial_sz;
-	gat->first->size     = 0;
-	gat->first->next     = NULL;
+	gat->head->alloc_sz  = initial_sz;
+	gat->head->size      = 0;
+	gat->head->prev      = NULL;
 	gat->max_grow        = max_grow ? max_grow : (initial_sz * 2);
 	gat->default_align   = default_align ? default_align : 16;
+	gat->pre_head_size   = 0;
 	iface->iface.ctx     = gat;
 	iface->iface.alloc   = alloc_grp_temps;
 	iface->save          = cop_alloc_grp_temps_save;
@@ -306,11 +285,10 @@ int cop_alloc_grp_temps_init(struct cop_alloc_grp_temps *gat, struct cop_salloc_
 	return 0;
 }
 
-void cop_alloc_grp_temps_free(struct cop_alloc_grp_temps *gat)
-{
-	while (gat->first != NULL) {
-		struct cop_alloc_grp_temps_buf *tmp = gat->first;
-		gat->first = tmp->next;
+void cop_alloc_grp_temps_free(struct cop_alloc_grp_temps *gat) {
+	while (gat->head != NULL) {
+		struct cop_alloc_grp_temps_buf *tmp = gat->head;
+		gat->head = tmp->prev;
 		free(tmp);
 	}
 }

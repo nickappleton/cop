@@ -132,13 +132,13 @@ struct cop_alloc_virtual {
 struct cop_alloc_grp_temps_buf {
 	size_t                          size;
 	size_t                          alloc_sz;
-
-	struct cop_alloc_grp_temps_buf *next;
+	struct cop_alloc_grp_temps_buf *prev;
 };
 struct cop_alloc_grp_temps {
 	size_t                          default_align;
 	size_t                          max_grow;
-	struct cop_alloc_grp_temps_buf *first;
+	size_t                          pre_head_size; /* sum of size members of all buffers before head */
+	struct cop_alloc_grp_temps_buf *head;
 };
 
 #endif /* COP_ALLOC_H */
