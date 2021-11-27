@@ -591,6 +591,7 @@ VEC_FUNCTION_ATTRIBUTES v4d v4d_rotl(v4d a, v4d b)
 
 typedef float32x4_t v4f;
 
+VEC_FUNCTION_ATTRIBUTES void v4f_ste0(void *ptr, v4f val) { vst1q_f32(ptr, val); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_add(v4f a, v4f b)      { return vaddq_f32(a, b); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_sub(v4f a, v4f b)      { return vsubq_f32(a, b); }
 VEC_FUNCTION_ATTRIBUTES v4f  v4f_mul(v4f a, v4f b)      { return vmulq_f32(a, b); }
